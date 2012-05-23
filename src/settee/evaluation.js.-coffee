@@ -1,0 +1,182 @@
+
+Settee.op=
+  print_r: (expr, evaluate)->
+    Settee._.log expr
+
+
+operators= Settee.fnx=
+  # lisp-y list-y stuff
+  first: ->
+    l= arguments[0]
+    return null if !l or !l.length
+    l[0]
+  rest: ->
+    l= arguments[0]
+    return [] if !l or !l.length
+    l.slice(1)
+  cons: ->
+    a= arguments[1]
+    return [arguments[0]] unless a
+    a.unshift arguments[0]
+    a
+  
+  # Logical
+  not: ->
+    !arguments[0]
+  and: ->
+    for arg in arguments
+      return false if !arg
+    true
+  or: ->
+    for arg in arguments
+      return true if arg
+    false
+  
+  # Comparison
+  "<=": (x,y)-> x <= y
+  "<": (x,y)-> x < y
+  ">=": (x,y)-> x >= y
+  ">": (x,y)-> x > y
+  "=": (x,y)-> x == y
+  "eq": (x,y)-> x == y
+  "neq": (x,y)-> x != y
+  
+  # Arithmetic
+  "+": -> # supports numbers or strings (acts as concat)
+    res= if isNaN(arguments[0]) then "" else 0
+    _.each arguments, (x,i)-> res += x
+    res
+  "-": ->
+    res= arguments[0] * 2
+    _.each arguments, (x,i)-> res -= x
+    res
+  "*": ->
+    res= 1
+    _.each arguments, (x,i)-> res *= x
+    res
+  "/": ->
+    res= arguments[0] * arguments[0]
+    _.each arguments, (x,i)-> res /= x
+    res
+  # TODO: let?
+
+# for LISP nerds
+Settee.fnx.car=Settee.fnx.first
+Settee.fnx.cdr=Settee.fnx.rest
+
+get_env= (expr,env)->
+  return false if typeof(expr) isnt "string"
+  return env[expr] if expr of env
+  if (parts= expr.split('.')).length > 1
+    if parts[0] of env
+      obj=env
+      for part in parts
+        obj= obj[part] #if obj[part]
+      return obj if obj != env
+  return get_env(expr, env['_parent']) if '_parent' of env
+  false
+
+apply_to= (proc, args)->
+  return proc.apply(@, args) if _.isFunction proc
+  throw "Procedure #{proc} is not defined"
+
+make_proc= (args, body, env)->
+  (params...)->
+    newenv= {}
+    newenv['_parent']= env
+    _.each args, (x,i)-> newenv[x]= params[i]
+    _.each body.slice(0, body.length-1), (x,i)-> _evaluate(x, newenv)
+    _evaluate body[body.length-1], newenv
+
+_do_evaluate= (code, env={}, opts={})->
+  env['@auto_tag']= if opts.auto_tag then yes else no
+  _evaluate(code,env)
+
+_evaluate= (expr, env)->
+  ez= expr[0]
+
+  # Atoms
+  return Number expr if not isNaN expr
+  return null if expr is "nil" or expr is "null"
+  if ez  is '"'
+    v= expr.slice(1) 
+    #TODO: String interpolation.
+    return v.replace(/[\\]"/g, '"')
+
+  # List
+  return _.map(expr.slice(1), (x)->
+    v= _evaluate x, env
+    return Array v if _.isArray(v)
+    v
+  ) if ez is "list"
+  if ez is 'quote' # not sure if this is really right or not...
+    v=expr[1]
+    return v.slice(1).replace(/[\\]"/g, '"') if v[0] is '"' # Just to pull out our string ident
+    return v
+
+  # Variables
+  return ge if (ge= get_env(expr,env))
+  if ez is "set" or ez is "set!" or ez is "setq"
+    variable= env[expr[1]]= _evaluate(expr[2], env)
+    return variable
+
+  # Conditional
+  if ez is 'if'
+    return _evaluate expr[2], env if _evaluate expr[1], env
+    return null if expr.length <= 3
+    _.each(expr.slice(2, expr[expr.length - 2]), (x,i)->
+      _evaluate x, env
+    )
+    return _evaluate expr[expr.length - 1], env
+  if ez is 'cond'
+    cases= expr.slice(1, expr.length)
+    for rule in cases
+      return _evaluate(rule[rule.length - 1]) if _evaluate rule[0], env
+    return null # since there's no cond match?
+  if ez is 'each'
+    # [target,keyword,source]=expr[1]
+    source= expr[1][0]
+    res=[]
+    for data in _evaluate(source, env)
+      newenv= data
+      newenv['_parent']= env
+      res.push _evaluate(expr[2], newenv)
+      # delete newenv['_parent']
+    return res.join('') #?
+
+  # Procedures
+  return operators[expr] if expr of operators
+
+  # Tags
+  if ez of tags
+    ev= (src)-> _evaluate src, env
+    return tags[ez](expr, ev)
+  else if typeof(ez) is 'string' and (parts= ez.split('.')).length > 1
+    if parts[0] of tags
+      ev= (src)-> _evaluate src, env
+      return tags[parts[0]](expr, ev)
+
+  return make_proc expr[1], expr.slice(2), env if ez is 'lambda'
+  return env[expr[1]]= make_proc expr[2], expr.slice(3), env if ez is 'defun'
+  return eval(expr[1]) if ez is 'js'
+  # Apply
+  # return make_tag(expr, env)
+
+  if get_env('@auto_tag', env)
+    ev= (src)-> _evaluate src, env
+    return _.tag_builder(expr, ev)
+
+  if _.isArray expr
+    return apply_to(
+      _evaluate(ez, env),
+      _.map(expr.slice(1), (x,i)-> 
+        v= _evaluate x, env
+        if _.isArray(v) then Array v else v
+      )
+    )
+  
+  # look for a method_missing or missing or unknown
+  # handler in the list of ops/fns and call it?
+
+  throw "#{expr} is not defined."
+

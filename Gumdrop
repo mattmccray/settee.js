@@ -1,0 +1,34 @@
+#puts "Gumdrop v#{Gumdrop::VERSION} building..."
+
+configure do
+  set :site_title,   "Sette"
+  set :site_tagline, "The s-expression template engine."
+  set :site_author,  "Matt McCray"
+  set :site_url,     "https://github.com/darthapo/settee.js"
+  set :output_dir, "./"
+  set :source_dir, "./src"
+end
+
+
+ignore 'settee/*'
+ignore 'lib/*'
+skip 'index.html'
+
+generate do
+
+  sprockets 'settee.js', :src=>'settee.js', :paths=>['./lib'], :prune=>false, :root=>'./src', :compress=>false
+
+  sprockets 'settee.min.js', :src=>'settee.js', :paths=>['./lib'], :prune=>false, :root=>'./src', :compress=>:uglify
+
+  # for test with build server (run rake serve):
+  %w(chai.js mocha.css mocha.js).each do |libname|
+    path= "lib/#{libname}"
+    page path do
+      IO.read(path)
+    end
+  end
+  page 'index.html' do
+    '<script>document.location="/test/index.html";</script>'
+  end
+   
+end
