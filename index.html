@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Settee.js by darthapo</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Settee.js</h1>
+        <p>S-Expression template engine.</p>
+        <p class="view"><a href="https://github.com/darthapo/settee.js">View the Project on GitHub <small>darthapo/settee.js</small></a></p>
+        <ul>
+          <li><a href="https://github.com/darthapo/settee.js/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/darthapo/settee.js/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/darthapo/settee.js">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h2>Settee is an s-expression template engine with no external dependencies.</h2>
+
+<pre><code>   ________
+  (        )
+ ()________()
+ ||________||
+ '          '
+</code></pre>
+
+<p><strong>Templates look like this:</strong></p>
+
+<div class="highlight">
+<pre><span class="p">(</span><span class="nv">html</span>
+  <span class="p">(</span><span class="nv">head</span>
+    <span class="p">(</span><span class="nv">title</span> <span class="s">"Hello"</span><span class="p">)</span>
+    <span class="p">(</span><span class="nv">script</span> <span class="nv">src=</span><span class="s">"/js/my-app.js"</span><span class="p">))</span>
+  <span class="p">(</span><span class="nv">body</span>
+    <span class="p">(</span><span class="nv">article</span>
+      <span class="p">(</span><span class="nv">section.main</span>
+        <span class="p">(</span><span class="nv">p</span> <span class="s">"Welcome to my site, "</span> <span class="nv">name</span> <span class="s">"!"</span><span class="p">)))</span>
+    <span class="p">(</span><span class="nv">aside.sidebar</span>
+        <span class="p">(</span><span class="nv">ul</span>
+          <span class="p">(</span><span class="nv">li</span>
+            <span class="p">(</span><span class="nv">a</span> <span class="nv">href=</span><span class="s">"/index.html"</span> <span class="s">"Home"</span><span class="p">))))))</span>
+</pre>
+</div>
+
+
+<p><strong>Use it like this:</strong></p>
+
+<div class="highlight">
+<pre><span class="kd">var</span> <span class="nx">template</span><span class="o">=</span> <span class="nx">Settee</span><span class="p">(</span><span class="nx">source</span><span class="p">,</span> <span class="p">{</span> <span class="nx">auto_balance</span><span class="o">:</span><span class="kc">true</span> <span class="p">}),</span>
+    <span class="nx">html</span><span class="o">=</span> <span class="nx">template</span><span class="p">({</span> <span class="nx">name</span><span class="o">:</span><span class="s2">"Matt"</span> <span class="p">})</span>
+</pre>
+</div>
+
+
+<p>It's great to drink coffee while lounging on the settee!</p>
+
+<div class="highlight">
+<pre><span class="nv">template= </span><span class="nx">Settee</span> <span class="nx">source</span><span class="p">,</span> <span class="nx">auto_balance</span><span class="o">:</span><span class="kc">yes</span>
+<span class="nv">html= </span><span class="nx">template</span> <span class="nx">name</span><span class="o">:</span><span class="s">"Matt"</span>
+</pre>
+</div>
+
+
+<p>It can be classy too!</p>
+
+<div class="highlight">
+<pre><span class="nv">template= </span><span class="k">new</span> <span class="nx">Settee</span><span class="p">(</span><span class="nx">source</span><span class="p">,</span> <span class="nx">auto_balance</span><span class="o">:</span><span class="kc">yes</span><span class="p">,</span> <span class="nx">auto_tag</span><span class="o">:</span><span class="kc">yes</span><span class="p">)</span>
+<span class="nv">html= </span><span class="nx">template</span><span class="p">.</span><span class="nx">render</span> <span class="nx">name</span><span class="o">:</span><span class="s">"Matt"</span>
+</pre>
+</div>
+
+
+<h2>Method Signature</h2>
+
+<p>As function:</p>
+
+<pre><code>Settee( source:string [, options:object] )
+</code></pre>
+
+<p>Returns a #template function:</p>
+
+<pre><code>template( context:object, helpers:object )
+</code></pre>
+
+<p>As class:</p>
+
+<pre><code>new Settee( source:string [, options:object] )
+</code></pre>
+
+<p>Returns a settee #object:</p>
+
+<pre><code>object.render( context:object, helpers:object )
+</code></pre>
+
+<h2>Options</h2>
+
+<ul>
+<li>auto_balance:Bool  -- ignore imbalanced parens (default:true)</li>
+<li>auto_tag:Bool      -- unknown actions create tags (default:false)</li>
+</ul><h3>Credits</h3>
+
+<p>S-Expression evaluation code based on:</p>
+
+<blockquote>
+<p><a href="http://code.google.com/p/javascript-lisp-interpreter/source/browse/lisp.js">http://code.google.com/p/javascript-lisp-interpreter/source/browse/lisp.js</a></p>
+</blockquote>
+
+<p>Some helpers based on Underscore.js:</p>
+
+<blockquote>
+<p><a href="http://underscorejs.org/">http://underscorejs.org/</a></p>
+</blockquote>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/darthapo">darthapo</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-632821-27");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
