@@ -18,7 +18,7 @@ generate do
 
   sprockets 'settee.js', :src=>'settee.js', :paths=>['./lib'], :prune=>false, :root=>'./src', :compress=>false
 
-  sprockets 'settee.min.js', :src=>'settee.js', :paths=>['./lib'], :prune=>false, :root=>'./src', :compress=>:uglify
+  sprockets 'settee.min.js', :src=>'settee.js', :paths=>['./lib'], :prune=>false, :root=>'./src', :compress=>:packr
 
   # for test with build server (run rake serve):
   %w(chai.js mocha.css mocha.js).each do |libname|

@@ -29,6 +29,17 @@
         expect(Settee.to_html('(div.list)')).to.equal('<div class="list"></div>');
         return expect(Settee.to_html('(div.list.active)')).to.equal('<div class="list active"></div>');
       });
+      it("should default to div for (.list.active) with auto_tag", function() {
+        expect(Settee.to_html('(section.list)', {}, {
+          auto_tag: true
+        })).to.equal('<section class="list"></section>');
+        expect(Settee.to_html('(.list)', {}, {
+          auto_tag: true
+        })).to.equal('<div class="list"></div>');
+        return expect(Settee.to_html('(.list.active)', {}, {
+          auto_tag: true
+        })).to.equal('<div class="list active"></div>');
+      });
       return it('should support auto_tag generation: <crap></crap> for (crap)', function() {
         var res;
         res = Settee.to_html('(crap)', {}, {

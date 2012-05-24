@@ -109,7 +109,7 @@ Settee._= _=
       attrs= ""
       tag= expr[0]
       if (parts= tag.split('.')).length > 1
-        tag= parts.shift()
+        tag= parts.shift() or "div"
         attrs += " class=\"#{parts.join(' ')}\""
       for exp in expr[1...]
         if attr= _.parseAttrs(exp)

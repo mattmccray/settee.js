@@ -60,3 +60,9 @@ describe 'Settee#evaluate', ->
     expect( Settee('(+ name)')(ctx) ).to.equal(ctx.name)
     expect( Settee('(+ "My name is " name)')(ctx) ).to.equal("My name is Matt")
     expect( Settee('(p name)')(ctx) ).to.equal('<p>Matt</p>')
+
+  it 'should reference env variable by :symbol', ->
+    expect(Settee.to_html("(+ :name)", name:"Matt")).to.equal('Matt')
+    expect(Settee.to_html("(+ :city)", city:"Dallas")).to.equal('Dallas')
+
+

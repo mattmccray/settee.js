@@ -32,6 +32,11 @@ describe 'Settee', ->
     it "should add class shortcuts (div.list.active)", ->
       expect(Settee.to_html('(div.list)')).to.equal('<div class="list"></div>')
       expect(Settee.to_html('(div.list.active)')).to.equal('<div class="list active"></div>')
+
+    it "should default to div for (.list.active) with auto_tag", ->
+      expect(Settee.to_html('(section.list)',{},auto_tag:yes)).to.equal('<section class="list"></section>')
+      expect(Settee.to_html('(.list)',{},auto_tag:yes)).to.equal('<div class="list"></div>')
+      expect(Settee.to_html('(.list.active)',{},auto_tag:yes)).to.equal('<div class="list active"></div>')
     
     it 'should support auto_tag generation: <crap></crap> for (crap)', ->
       res= Settee.to_html('(crap)',{},{auto_tag:true})

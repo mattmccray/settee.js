@@ -5,7 +5,7 @@ gem "sinatra"
 gem "active_support"
 
 gem "rake"
-gem "gumdrop" #, :path=>"~/Projects/OpenSource/gumdrop"
+gem "gumdrop"#, :path=>"~/Projects/OpenSource/gumdrop"
 
 # Add your dependencies here:
 
@@ -17,6 +17,7 @@ gem "gumdrop" #, :path=>"~/Projects/OpenSource/gumdrop"
 gem "coffee-script"
 
 # For JavaScript stitching and compressing:
+gem 'packr'
 gem 'uglifier'
 # gem 'yui-compressor'
 # gem 'jsmin'

@@ -76,6 +76,11 @@ Returns a settee #object:
 
 
 # TODO
+# - Add '#' operation for comments
+# - Add '#!' operation for html comments
+# - Add 'has' operation to check for var in env
+# - Add support for :symbols that resolve to env variables only
+# - Return all nodes not just the last one? ... Leaning toward no
 # - Get mocha via node working
 # - Test in node
 # - Add support for npm

@@ -64,6 +64,9 @@ operators= Settee.fnx=
 Settee.fnx.car=Settee.fnx.first
 Settee.fnx.cdr=Settee.fnx.rest
 
+# Truthy test same as 'and'
+Settee.fnx["?"]=Settee.fnx.and
+
 get_env= (expr,env)->
   return false if typeof(expr) isnt "string"
   return env[expr] if expr of env
@@ -74,6 +77,18 @@ get_env= (expr,env)->
         obj= obj[part] #if obj[part]
       return obj if obj != env
   return get_env(expr, env['_parent']) if '_parent' of env
+  false
+
+has_env= (expr,env)->
+  return false if typeof(expr) isnt "string"
+  return true if expr of env
+  if (parts= expr.split('.')).length > 1
+    if parts[0] of env
+      obj=env
+      for part in parts
+        obj= obj[part] #if obj[part]
+      return true if obj != env # ???
+  return has_env(expr, env['_parent']) if '_parent' of env
   false
 
 apply_to= (proc, args)->
@@ -102,6 +117,9 @@ _evaluate= (expr, env)->
     v= expr.slice(1) 
     #TODO: String interpolation.
     return v.replace(/[\\]"/g, '"')
+  if ez  is ':'
+    key= expr.slice(1)
+    return get_env(key,env)
 
   # List
   return _.map(expr.slice(1), (x)->
@@ -123,7 +141,7 @@ _evaluate= (expr, env)->
   # Conditional
   if ez is 'if'
     return _evaluate expr[2], env if _evaluate expr[1], env
-    return null if expr.length <= 3
+    return "" if expr.length <= 3  # DID RETURN NULL
     _.each(expr.slice(2, expr[expr.length - 2]), (x,i)->
       _evaluate x, env
     )

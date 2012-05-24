@@ -46,7 +46,7 @@
       expect(Settee('(* 3 5)')()).to.equal(15);
       return expect(Settee('(/ 10 5)')()).to.equal(2);
     });
-    return it('should reference data from context', function() {
+    it('should reference data from context', function() {
       var ctx;
       ctx = {
         name: 'Matt',
@@ -55,6 +55,14 @@
       expect(Settee('(+ name)')(ctx)).to.equal(ctx.name);
       expect(Settee('(+ "My name is " name)')(ctx)).to.equal("My name is Matt");
       return expect(Settee('(p name)')(ctx)).to.equal('<p>Matt</p>');
+    });
+    return it('should reference env variable by :symbol', function() {
+      expect(Settee.to_html("(+ :name)", {
+        name: "Matt"
+      })).to.equal('Matt');
+      return expect(Settee.to_html("(+ :city)", {
+        city: "Dallas"
+      })).to.equal('Dallas');
     });
   });
 
