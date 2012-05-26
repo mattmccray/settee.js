@@ -1,10 +1,15 @@
+###
 
+OPERATIONS:
+  Arguments are the evaluated list atoms
+
+FUNCTIONS:
+  Arguments are unevaluated list nodes
+
+###
+
+# For handling evaluated exprs
 Settee.op=
-  print_r: (expr, evaluate)->
-    Settee._.log expr
-
-
-operators= Settee.fnx=
   # lisp-y list-y stuff
   first: ->
     l= arguments[0]
@@ -58,14 +63,111 @@ operators= Settee.fnx=
     res= arguments[0] * arguments[0]
     _.each arguments, (x,i)-> res /= x
     res
+  ".": -> # concat that swallows nulls/undefined as ""
+    res= ""
+    _.each arguments, (x,i)-> 
+      unless x is null or _.isUndefined(x)
+        res += x
+      else
+        ""
+    res
+
   # TODO: let?
 
 # for LISP nerds
-Settee.fnx.car=Settee.fnx.first
-Settee.fnx.cdr=Settee.fnx.rest
+Settee.op.car=Settee.op.first
+Settee.op.cdr=Settee.op.rest
 
 # Truthy test same as 'and'
-Settee.fnx["?"]=Settee.fnx.and
+Settee.op["?"]=Settee.op.and
+  
+
+# For handling raw exprs
+Settee.fn= 
+  print_r: (expr, env, evaluate)->
+    Settee._.log expr
+
+  # Atom
+  '"': (expr, env, _evaluate)->
+    v= expr.slice(1) 
+    #TODO: String interpolation.
+    return v.replace(/[\\]"/g, '"')
+  
+  # Get's env variable, swallows null (and all falsy really)
+  ':': (expr, env, _evaluate)->
+    key= expr.slice(1)
+    val=get_env(key,env)
+    return val or ""
+
+  # Conditionals
+  "if": (expr, env, _evaluate)->
+    return _evaluate expr[2], env if _evaluate expr[1], env
+    return "" if expr.length <= 3  # DID RETURN NULL
+    _.each(expr.slice(2, expr[expr.length - 2]), (x,i)->
+      _evaluate x, env
+    )
+    return _evaluate expr[expr.length - 1], env
+
+  "case": (expr, env, _evaluate)->
+    # TODO: Should a (case) statement have an else clause?
+    cases= expr.slice(1, expr.length)
+    for rule in cases
+      return _evaluate(rule[rule.length - 1], env) if _evaluate rule[0], env
+    return null # since there's no cond match?
+
+  # List
+  "list": (expr, env, _evaluate)->
+    return _.map(expr.slice(1), (x)->
+      v= _evaluate x, env
+      return Array v if _.isArray(v)
+      v
+    )
+
+  # not sure if this is really right or not...
+  'quote': (expr, env, _evaluate)->
+    v=expr[1]
+    # Just to pull out our string ident
+    return v.slice(1).replace(/[\\]"/g, '"') if v[0] is '"' 
+    return v
+
+  # Variables
+  "set": (expr, env, _evaluate)->
+    variable= env[expr[1]]= _evaluate(expr[2], env)
+    return variable
+
+  'each': (expr, env, _evaluate)->
+    # [target,keyword,source]=expr[1]
+    source= expr[1][0]
+    res=[]
+    for data in _evaluate(source, env)
+      newenv= data
+      newenv['_parent']= env
+      # newenv['_loop']= idx
+      res.push _evaluate(expr[2], newenv)
+      # delete newenv['_parent']
+    return res.join('') #?
+
+  'lambda': (expr, env, _evaluate)->
+    return make_proc expr[1], expr.slice(2), env
+
+  'def': (expr, env, _evaluate)->
+    return env[expr[1]]= make_proc expr[2], expr.slice(3), env
+
+  'js': (expr, env, _evaluate)->
+    return eval(expr[1])
+
+
+# More LISP nerdery
+Settee.fn.cond= Settee
+Settee.fn.setq= Settee.fn['set!']= Settee
+Settee.fn.defun= Settee
+
+
+# HTML Tags
+
+Settee.tags= {}
+
+Settee.tags[tagName]= _.tag_builder for tagName in "a abbr address area article aside audio b base bdi bdo blockquote body br button canvas caption cite code col colgroup command data datalist dd del details dfn div dl dt em embed eventsource fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img input ins kbd keygen label legend li link mark map menu meta meter nav noscript object ol optgroup option output p param pre progress q ruby rp rt s samp script section select small source span strong style sub summary sup table tbody td textarea tfoot th thead time title tr track u ul var video wbr".split(' ')
 
 get_env= (expr,env)->
   return false if typeof(expr) isnt "string"
@@ -77,7 +179,8 @@ get_env= (expr,env)->
         obj= obj[part] #if obj[part]
       return obj if obj != env
   return get_env(expr, env['_parent']) if '_parent' of env
-  false
+  #false
+  null
 
 has_env= (expr,env)->
   return false if typeof(expr) isnt "string"
@@ -111,79 +214,31 @@ _evaluate= (expr, env)->
   ez= expr[0]
 
   # Atoms
+  return null if expr is "nil" or expr is "null" or expr is null
   return Number expr if not isNaN expr
-  return null if expr is "nil" or expr is "null"
-  if ez  is '"'
-    v= expr.slice(1) 
-    #TODO: String interpolation.
-    return v.replace(/[\\]"/g, '"')
-  if ez  is ':'
-    key= expr.slice(1)
-    return get_env(key,env)
-
-  # List
-  return _.map(expr.slice(1), (x)->
-    v= _evaluate x, env
-    return Array v if _.isArray(v)
-    v
-  ) if ez is "list"
-  if ez is 'quote' # not sure if this is really right or not...
-    v=expr[1]
-    return v.slice(1).replace(/[\\]"/g, '"') if v[0] is '"' # Just to pull out our string ident
-    return v
 
   # Variables
   return ge if (ge= get_env(expr,env))
-  if ez is "set" or ez is "set!" or ez is "setq"
-    variable= env[expr[1]]= _evaluate(expr[2], env)
-    return variable
 
-  # Conditional
-  if ez is 'if'
-    return _evaluate expr[2], env if _evaluate expr[1], env
-    return "" if expr.length <= 3  # DID RETURN NULL
-    _.each(expr.slice(2, expr[expr.length - 2]), (x,i)->
-      _evaluate x, env
-    )
-    return _evaluate expr[expr.length - 1], env
-  if ez is 'cond'
-    cases= expr.slice(1, expr.length)
-    for rule in cases
-      return _evaluate(rule[rule.length - 1]) if _evaluate rule[0], env
-    return null # since there's no cond match?
-  if ez is 'each'
-    # [target,keyword,source]=expr[1]
-    source= expr[1][0]
-    res=[]
-    for data in _evaluate(source, env)
-      newenv= data
-      newenv['_parent']= env
-      res.push _evaluate(expr[2], newenv)
-      # delete newenv['_parent']
-    return res.join('') #?
+  # Functions
+  return Settee.fn[ez](expr, env, _evaluate) if ez of Settee.fn
 
-  # Procedures
-  return operators[expr] if expr of operators
+  # Operators
+  return Settee.op[expr] if expr of Settee.op
 
   # Tags
-  if ez of tags
-    ev= (src)-> _evaluate src, env
-    return tags[ez](expr, ev)
+  if ez of Settee.tags
+    return Settee.tags[ez](expr, env, _evaluate)
   else if typeof(ez) is 'string' and (parts= ez.split('.')).length > 1
-    if parts[0] of tags
-      ev= (src)-> _evaluate src, env
-      return tags[parts[0]](expr, ev)
+    if parts[0] of Settee.tags
+      return Settee.tags[parts[0]](expr, env, _evaluate)
 
-  return make_proc expr[1], expr.slice(2), env if ez is 'lambda'
-  return env[expr[1]]= make_proc expr[2], expr.slice(3), env if ez is 'defun'
-  return eval(expr[1]) if ez is 'js'
-  # Apply
-  # return make_tag(expr, env)
-
+  # Auto tag support
   if get_env('@auto_tag', env)
     ev= (src)-> _evaluate src, env
     return _.tag_builder(expr, ev)
 
+  # Apply
   if _.isArray expr
     return apply_to(
       _evaluate(ez, env),
@@ -193,8 +248,6 @@ _evaluate= (expr, env)->
       )
     )
   
-  # look for a method_missing or missing or unknown
-  # handler in the list of ops/fns and call it?
+  # TODO: look for a method_missing or missing or unknown handler in the list of ops/fns/env and call it?
 
   throw "#{expr} is not defined."
-

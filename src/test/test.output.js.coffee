@@ -47,3 +47,52 @@ describe 'Settee', ->
 
       res=new Settee('(crap.active id=live)',{auto_tag:true})
       expect(res.render()).to.equal('<crap class="active" id="live"></crap>')
+
+    it 'should swallow null/undefined when using (. :varname)', =>
+      src= '(div "Hello" (. :name))'
+      res= Settee.to_html(src, name:null)
+      expect(res).to.equal("<div>Hello</div>")
+
+      src= '(div "Hello " (. :name :city))'
+      res= Settee.to_html(src, city:"Dallas")
+      expect(res).to.equal("<div>Hello Dallas</div>")
+
+    it 'should allow creating custom tags (def)', ->
+      src='''
+          (def widget (body)
+            (div.widget
+              (div.body body)))
+          (widget
+            (div "Hello!"))
+          '''
+      output= Settee.to_html(src)
+      expected= '<div class="widget"><div class="body"><div>Hello!</div></div></div>'
+      expect(output).to.equal(expected)
+
+    it 'should allow creating custom tags via helpers', ->
+      Settee.define 'widget', '(div.widget (div.body :block1'
+      src='''
+          (widget
+            (div "Hello!"))
+          '''
+      output= Settee.to_html(src)
+      expected= '<div class="widget"><div class="body"><div>Hello!</div></div></div>'
+      expect(output).to.equal(expected)
+
+      Settee.undefine()
+      expect(Settee.tags['widget']).to.be.undefined
+
+    it 'should allow adding attrs to custom tags', ->
+      
+      Settee.define( 'widget', '(div.widget (div.body :blocks')
+
+      src='''(.
+          (widget id=mine
+            (div "Hello!"))
+          (widget id=yours 
+            (div "Hello!")
+            (div "GOODBYE!"))
+          '''
+      output= Settee.to_html(src)
+      expected= '<div class="widget" id="mine"><div class="body"><div>Hello!</div></div></div><div class="widget" id="yours"><div class="body"><div>Hello!</div><div>GOODBYE!</div></div></div>'
+      expect(output).to.equal(expected)

@@ -65,4 +65,24 @@ describe 'Settee#evaluate', ->
     expect(Settee.to_html("(+ :name)", name:"Matt")).to.equal('Matt')
     expect(Settee.to_html("(+ :city)", city:"Dallas")).to.equal('Dallas')
 
+  it 'should support (if (expr))', ->
+    src='''
+        (if (eq :name "Matt")
+          (div "Hello!")
+          (div "Who?"))
+        '''
+    expect(Settee.to_html(src)).to.equal("<div>Who?</div>")
+    expect(Settee.to_html(src, name:'Matt')).to.equal("<div>Hello!</div>")
 
+  it 'should support (case (expr) (expr))', ->
+    src='''
+        (case
+          ((eq :name "Matt")
+            (div "Hi Matt!"))
+          ((eq :name "Dan")
+            (div "Hey Dan!"))
+        '''
+    expect(Settee.to_html(src, name:'Matt')).to.equal("<div>Hi Matt!</div>")
+    expect(Settee.to_html(src, name:'Dan')).to.equal("<div>Hey Dan!</div>")
+    expect(Settee.to_html(src)).to.equal(null)
+    

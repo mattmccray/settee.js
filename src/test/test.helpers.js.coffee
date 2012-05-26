@@ -70,8 +70,30 @@ describe 'Settee._', ->
 
   describe '#parseAttrs()', ->
     it 'should parse id=main and id="main"', ->
-      expect(Settee._.parseAttrs('id=main')).to.equal(' id="main"')
-      expect(Settee._.parseAttrs('id="main"')).to.equal(' id="main"')
+      expect(Settee._.parseAttrs('id=main')).to.equal('id="main"')
+      expect(Settee._.parseAttrs('id="main"')).to.equal('id="main"')
 
     it 'should optionally return a hash', ->
       expect(Settee._.parseAttrs('id="main"', false)).to.deep.equal({key:'id', value:'main'})
+
+  describe "#replaceArrayVal()", ->
+    it 'should replace a value within and array, recursively', ->
+      arr= ['a', 'b', 'c']
+      narr= Settee._.replaceArrayVal(arr, 'b', 'BEE')
+      expect(narr).to.deep.equal ['a', 'BEE', 'c']
+
+  describe '#extractAttrs()', ->
+    it 'should remove attr atoms and return hash of values', ->
+      src= Settee.parse('(div id=main class=bob "HELLO"').pop()
+      atts= Settee._.extractAttrs(src, yes)
+      # Settee._.log src, atts
+      expect(src).to.deep.equal(['div', '"HELLO'])
+      expect(atts).to.deep.equal( class:'bob', id:'main')
+
+    it 'should remove attr atoms and return array of attr strings', ->
+      src= Settee.parse('(div id=main class=bob "HELLO"').pop()
+      atts= Settee._.extractAttrs(src)
+      # Settee._.log src, atts
+      expect(src).to.deep.equal(['div', '"HELLO'])
+      expect(atts).to.deep.equal([ 'id="main"', 'class="bob"'])
+

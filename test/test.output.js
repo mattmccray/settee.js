@@ -9,6 +9,7 @@
 
   describe('Settee', function() {
     return describe("generated output", function() {
+      var _this = this;
       it("should return an html string", function() {
         var html, t;
         t = Settee(source_inline);
@@ -40,7 +41,7 @@
           auto_tag: true
         })).to.equal('<div class="list active"></div>');
       });
-      return it('should support auto_tag generation: <crap></crap> for (crap)', function() {
+      it('should support auto_tag generation: <crap></crap> for (crap)', function() {
         var res;
         res = Settee.to_html('(crap)', {}, {
           auto_tag: true
@@ -54,6 +55,44 @@
           auto_tag: true
         });
         return expect(res.render()).to.equal('<crap class="active" id="live"></crap>');
+      });
+      it('should swallow null/undefined when using (. :varname)', function() {
+        var res, src;
+        src = '(div "Hello" (. :name))';
+        res = Settee.to_html(src, {
+          name: null
+        });
+        expect(res).to.equal("<div>Hello</div>");
+        src = '(div "Hello " (. :name :city))';
+        res = Settee.to_html(src, {
+          city: "Dallas"
+        });
+        return expect(res).to.equal("<div>Hello Dallas</div>");
+      });
+      it('should allow creating custom tags (def)', function() {
+        var expected, output, src;
+        src = '(def widget (body)\n  (div.widget\n    (div.body body)))\n(widget\n  (div "Hello!"))';
+        output = Settee.to_html(src);
+        expected = '<div class="widget"><div class="body"><div>Hello!</div></div></div>';
+        return expect(output).to.equal(expected);
+      });
+      it('should allow creating custom tags via helpers', function() {
+        var expected, output, src;
+        Settee.define('widget', '(div.widget (div.body :block1');
+        src = '(widget\n  (div "Hello!"))';
+        output = Settee.to_html(src);
+        expected = '<div class="widget"><div class="body"><div>Hello!</div></div></div>';
+        expect(output).to.equal(expected);
+        Settee.undefine();
+        return expect(Settee.tags['widget']).to.be.undefined;
+      });
+      return it('should allow adding attrs to custom tags', function() {
+        var expected, output, src;
+        Settee.define('widget', '(div.widget (div.body :blocks');
+        src = '(.\n(widget id=mine\n  (div "Hello!"))\n(widget id=yours \n  (div "Hello!")\n  (div "GOODBYE!"))';
+        output = Settee.to_html(src);
+        expected = '<div class="widget" id="mine"><div class="body"><div>Hello!</div></div></div><div class="widget" id="yours"><div class="body"><div>Hello!</div><div>GOODBYE!</div></div></div>';
+        return expect(output).to.equal(expected);
       });
     });
   });

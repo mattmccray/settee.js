@@ -7,6 +7,8 @@ configure do
   set :site_url,     "https://github.com/darthapo/settee.js"
   set :output_dir, "./"
   set :source_dir, "./src"
+  # For dev server...
+  set :server_timeout, 3 # seconds...
 end
 
 
@@ -21,7 +23,7 @@ generate do
   sprockets 'settee.min.js', :src=>'settee.js', :paths=>['./lib'], :prune=>false, :root=>'./src', :compress=>:packr
 
   # for test with build server (run rake serve):
-  %w(chai.js mocha.css mocha.js).each do |libname|
+  %w(chai.js mocha.css mocha.js benchmark.js).each do |libname|
     path= "lib/#{libname}"
     page path do
       IO.read(path)

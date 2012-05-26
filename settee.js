@@ -1,6 +1,6 @@
 
 /*
-Settee.js v0.1
+Settee.js v0.2
 
        ________
       (        )
@@ -66,9 +66,9 @@ Returns a settee #object:
 
 
 (function() {
-  var ArrayProto, Settee, StringProto, apply_to, attrRE, breaker, can_apply_log, escapeRegExp, get_env, has_console, make_proc, nativeForEach, nativeIsArray, nativeMap, nativeTrim, operators, quotedAttrRE, root, slice, tagName, tags, _, _do_evaluate, _do_parse, _evaluate, _i, _len, _parser, _ref, _scanner,
-    __hasProp = {}.hasOwnProperty,
-    __slice = [].slice;
+  var ArrayProto, Settee, StringProto, apply_to, attrRE, breaker, can_apply_log, escapeRegExp, get_env, has_console, has_env, make_proc, nativeForEach, nativeIsArray, nativeMap, nativeTrim, quotedAttrRE, root, slice, tagName, _, _do_evaluate, _do_parse, _evaluate, _i, _len, _parser, _ref, _scanner,
+    __slice = [].slice,
+    __hasProp = {}.hasOwnProperty;
 
   Settee = (function() {
 
@@ -76,20 +76,6 @@ Returns a settee #object:
       auto_balance: true,
       auto_tag: false,
       extended: true
-    };
-
-    Settee.op = {};
-
-    Settee.fn = {
-      print: function() {
-        var msg, str, _i, _len;
-        str = "";
-        for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-          msg = arguments[_i];
-          str += msg;
-        }
-        return Settee._.log(str);
-      }
     };
 
     Settee.parse = function(source, opts) {
@@ -117,6 +103,55 @@ Returns a settee #object:
         env = {};
       }
       return Settee(source, opts)(env);
+    };
+
+    Settee.define = function(tag, template, callback) {
+      var src_nodes, _base;
+      if (callback == null) {
+        callback = false;
+      }
+      src_nodes = Settee.parse(template).pop();
+      if (Settee.tags[tag]) {
+        _.log("Settee: Warning, overwriting tag " + tag);
+      }
+      Settee.tags[tag] = function(expr, env, _evaluate) {
+        var atom, attrs, i, newenv, results, _i, _len;
+        if (callback) {
+          callback(expr, env, _evaluate);
+        }
+        attrs = Settee._.extractAttrs(expr);
+        newenv = {
+          _parent: env,
+          blocks: ""
+        };
+        for (i = _i = 0, _len = expr.length; _i < _len; i = ++_i) {
+          atom = expr[i];
+          if (i > 0) {
+            newenv.blocks += newenv["block" + i] = Settee._.tag_builder(atom, env, _evaluate);
+          }
+        }
+        src_nodes.splice.apply(src_nodes, [1, 0].concat(__slice.call(attrs)));
+        results = Settee._.tag_builder(src_nodes, newenv, _evaluate);
+        src_nodes.splice(1, attrs.length);
+        return results;
+      };
+      (_base = Settee.define)._tags || (_base._tags = []);
+      Settee.define._tags.push(tag);
+      return this;
+    };
+
+    Settee.undefine = function(tag) {
+      var tagname, _i, _len, _ref;
+      if (tag) {
+        return delete Settee.tags[tag];
+      } else {
+        _ref = Settee.define._tags;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          tagname = _ref[_i];
+          delete Settee.tags[tagname];
+        }
+        return Settee.define._tags = [];
+      }
     };
 
     function Settee(source, opts) {
@@ -290,6 +325,9 @@ Returns a settee #object:
     isFunction: function(obj) {
       return !!(obj && obj.constructor && obj.call && obj.apply);
     },
+    isUndefined: function(obj) {
+      return obj === void 0;
+    },
     parseAttrs: function(val, as_string) {
       var full, key, value, _ref, _ref1;
       if (as_string == null) {
@@ -299,7 +337,7 @@ Returns a settee #object:
         if (quotedAttrRE.test(val)) {
           _ref = val.match(quotedAttrRE), full = _ref[0], key = _ref[1], value = _ref[2];
           if (as_string) {
-            return " " + key + "=\"" + value + "\"";
+            return "" + key + "=\"" + value + "\"";
           }
           return {
             key: key,
@@ -308,7 +346,7 @@ Returns a settee #object:
         } else if (attrRE.test(val)) {
           _ref1 = val.match(attrRE), full = _ref1[0], key = _ref1[1], value = _ref1[2];
           if (as_string) {
-            return " " + key + "=\"" + value + "\"";
+            return "" + key + "=\"" + value + "\"";
           }
           return {
             key: key,
@@ -321,7 +359,59 @@ Returns a settee #object:
         return false;
       }
     },
-    tag_builder: function(expr, evaluate) {
+    extractAttrs: function(expr, parse, recurse) {
+      var atom, att, atts, i, idx, _i, _j, _len, _len1, _ref;
+      if (parse == null) {
+        parse = false;
+      }
+      if (recurse == null) {
+        recurse = false;
+      }
+      atts = parse ? {} : [];
+      idx = [];
+      for (i = _i = 0, _len = expr.length; _i < _len; i = ++_i) {
+        atom = expr[i];
+        if ((att = _.parseAttrs(atom, !parse))) {
+          if (parse) {
+            atts[att.key] = att.value;
+          } else {
+            atts.push(att);
+          }
+          idx.push(i);
+        }
+      }
+      _ref = idx.reverse();
+      for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+        i = _ref[_j];
+        expr.splice(i, 1);
+      }
+      return atts;
+    },
+    replaceArrayVal: function(arr, key, value, all) {
+      var i, idx, item, items, _i, _j, _len, _len1;
+      if (all == null) {
+        all = false;
+      }
+      items = arr;
+      idx = [];
+      for (i = _i = 0, _len = arr.length; _i < _len; i = ++_i) {
+        item = arr[i];
+        if (item === key) {
+          idx.push(i);
+          if (!all) {
+            break;
+          }
+        } else if (_.isArray(item)) {
+          _.replaceArrayVal(item, key, value, all);
+        }
+      }
+      for (_j = 0, _len1 = idx.length; _j < _len1; _j++) {
+        i = idx[_j];
+        arr.splice(i, 1, value);
+      }
+      return arr;
+    },
+    tag_builder: function(expr, env, evaluate) {
       var attr, attrs, body, exp, key, parts, tag, _i, _len, _ref;
       body = "";
       attrs = "";
@@ -334,14 +424,14 @@ Returns a settee #object:
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         exp = _ref[_i];
         if (attr = _.parseAttrs(exp)) {
-          attrs += attr;
+          attrs += " " + attr;
         } else {
           if (exp[0] === '@') {
-            key = exp[1][0] === '"' ? evaluate(exp[1]) : exp[1];
-            attr = " " + key + "=\"" + (evaluate(exp[2])) + "\"";
+            key = exp[1][0] === '"' ? evaluate(exp[1], env) : exp[1];
+            attr = " " + key + "=\"" + (evaluate(exp[2], env)) + "\"";
             attrs += attr;
           } else {
-            body += evaluate(exp);
+            body += evaluate(exp, env);
           }
         }
       }
@@ -372,14 +462,6 @@ Returns a settee #object:
       }
     })()
   };
-
-  Settee.tags = tags = {};
-
-  _ref = "a abbr address area article aside audio b base bdi bdo blockquote body br button canvas caption cite code col colgroup command data datalist dd del details dfn div dl dt em embed eventsource fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img input ins kbd keygen label legend li link mark map menu meta meter nav noscript object ol optgroup option output p param pre progress q ruby rp rt s samp script section select small source span strong style sub summary sup table tbody td textarea tfoot th thead time title tr track u ul var video wbr".split(' ');
-  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-    tagName = _ref[_i];
-    tags[tagName] = _.tag_builder;
-  }
 
   _scanner = function() {
     var delta, fc, index, start, t;
@@ -433,13 +515,17 @@ Returns a settee #object:
     return result;
   };
 
-  Settee.op = {
-    print_r: function(expr, evaluate) {
-      return Settee._.log(expr);
-    }
-  };
+  /*
+  
+  OPERATIONS:
+    Arguments are the evaluated list atoms
+  
+  FUNCTIONS:
+    Arguments are unevaluated list nodes
+  */
 
-  operators = Settee.fnx = {
+
+  Settee.op = {
     first: function() {
       var l;
       l = arguments[0];
@@ -469,9 +555,9 @@ Returns a settee #object:
       return !arguments[0];
     },
     and: function() {
-      var arg, _j, _len1;
-      for (_j = 0, _len1 = arguments.length; _j < _len1; _j++) {
-        arg = arguments[_j];
+      var arg, _i, _len;
+      for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+        arg = arguments[_i];
         if (!arg) {
           return false;
         }
@@ -479,9 +565,9 @@ Returns a settee #object:
       return true;
     },
     or: function() {
-      var arg, _j, _len1;
-      for (_j = 0, _len1 = arguments.length; _j < _len1; _j++) {
-        arg = arguments[_j];
+      var arg, _i, _len;
+      for (_i = 0, _len = arguments.length; _i < _len; _i++) {
+        arg = arguments[_i];
         if (arg) {
           return true;
         }
@@ -540,14 +626,125 @@ Returns a settee #object:
         return res /= x;
       });
       return res;
+    },
+    ".": function() {
+      var res;
+      res = "";
+      _.each(arguments, function(x, i) {
+        if (!(x === null || _.isUndefined(x))) {
+          return res += x;
+        } else {
+          return "";
+        }
+      });
+      return res;
     }
   };
 
-  Settee.fnx.car = Settee.fnx.first;
+  Settee.op.car = Settee.op.first;
 
-  Settee.fnx.cdr = Settee.fnx.rest;
+  Settee.op.cdr = Settee.op.rest;
 
-  Settee.fnx["?"] = Settee.fnx.and;
+  Settee.op["?"] = Settee.op.and;
+
+  Settee.fn = {
+    print_r: function(expr, env, evaluate) {
+      return Settee._.log(expr);
+    },
+    '"': function(expr, env, _evaluate) {
+      var v;
+      v = expr.slice(1);
+      return v.replace(/[\\]"/g, '"');
+    },
+    ':': function(expr, env, _evaluate) {
+      var key, val;
+      key = expr.slice(1);
+      val = get_env(key, env);
+      return val || "";
+    },
+    "if": function(expr, env, _evaluate) {
+      if (_evaluate(expr[1], env)) {
+        return _evaluate(expr[2], env);
+      }
+      if (expr.length <= 3) {
+        return "";
+      }
+      _.each(expr.slice(2, expr[expr.length - 2]), function(x, i) {
+        return _evaluate(x, env);
+      });
+      return _evaluate(expr[expr.length - 1], env);
+    },
+    "case": function(expr, env, _evaluate) {
+      var cases, rule, _i, _len;
+      cases = expr.slice(1, expr.length);
+      for (_i = 0, _len = cases.length; _i < _len; _i++) {
+        rule = cases[_i];
+        if (_evaluate(rule[0], env)) {
+          return _evaluate(rule[rule.length - 1], env);
+        }
+      }
+      return null;
+    },
+    "list": function(expr, env, _evaluate) {
+      return _.map(expr.slice(1), function(x) {
+        var v;
+        v = _evaluate(x, env);
+        if (_.isArray(v)) {
+          return Array(v);
+        }
+        return v;
+      });
+    },
+    'quote': function(expr, env, _evaluate) {
+      var v;
+      v = expr[1];
+      if (v[0] === '"') {
+        return v.slice(1).replace(/[\\]"/g, '"');
+      }
+      return v;
+    },
+    "set": function(expr, env, _evaluate) {
+      var variable;
+      variable = env[expr[1]] = _evaluate(expr[2], env);
+      return variable;
+    },
+    'each': function(expr, env, _evaluate) {
+      var data, newenv, res, source, _i, _len, _ref;
+      source = expr[1][0];
+      res = [];
+      _ref = _evaluate(source, env);
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        data = _ref[_i];
+        newenv = data;
+        newenv['_parent'] = env;
+        res.push(_evaluate(expr[2], newenv));
+      }
+      return res.join('');
+    },
+    'lambda': function(expr, env, _evaluate) {
+      return make_proc(expr[1], expr.slice(2), env);
+    },
+    'def': function(expr, env, _evaluate) {
+      return env[expr[1]] = make_proc(expr[2], expr.slice(3), env);
+    },
+    'js': function(expr, env, _evaluate) {
+      return eval(expr[1]);
+    }
+  };
+
+  Settee.fn.cond = Settee;
+
+  Settee.fn.setq = Settee.fn['set!'] = Settee;
+
+  Settee.fn.defun = Settee;
+
+  Settee.tags = {};
+
+  _ref = "a abbr address area article aside audio b base bdi bdo blockquote body br button canvas caption cite code col colgroup command data datalist dd del details dfn div dl dt em embed eventsource fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img input ins kbd keygen label legend li link mark map menu meta meter nav noscript object ol optgroup option output p param pre progress q ruby rp rt s samp script section select small source span strong style sub summary sup table tbody td textarea tfoot th thead time title tr track u ul var video wbr".split(' ');
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    tagName = _ref[_i];
+    Settee.tags[tagName] = _.tag_builder;
+  }
 
   get_env = function(expr, env) {
     var obj, part, parts, _j, _len1;
@@ -571,6 +768,32 @@ Returns a settee #object:
     }
     if ('_parent' in env) {
       return get_env(expr, env['_parent']);
+    }
+    return null;
+  };
+
+  has_env = function(expr, env) {
+    var obj, part, parts, _j, _len1;
+    if (typeof expr !== "string") {
+      return false;
+    }
+    if (expr in env) {
+      return true;
+    }
+    if ((parts = expr.split('.')).length > 1) {
+      if (parts[0] in env) {
+        obj = env;
+        for (_j = 0, _len1 = parts.length; _j < _len1; _j++) {
+          part = parts[_j];
+          obj = obj[part];
+        }
+        if (obj !== env) {
+          return true;
+        }
+      }
+    }
+    if ('_parent' in env) {
+      return has_env(expr, env['_parent']);
     }
     return false;
   };
@@ -610,103 +833,29 @@ Returns a settee #object:
   };
 
   _evaluate = function(expr, env) {
-    var cases, data, ev, ez, ge, key, newenv, parts, res, rule, source, v, variable, _j, _k, _len1, _len2, _ref1;
+    var ev, ez, ge, parts;
     ez = expr[0];
-    if (!isNaN(expr)) {
-      return Number(expr);
-    }
-    if (expr === "nil" || expr === "null") {
+    if (expr === "nil" || expr === "null" || expr === null) {
       return null;
     }
-    if (ez === '"') {
-      v = expr.slice(1);
-      return v.replace(/[\\]"/g, '"');
-    }
-    if (ez === ':') {
-      key = expr.slice(1);
-      return get_env(key, env);
-    }
-    if (ez === "list") {
-      return _.map(expr.slice(1), function(x) {
-        v = _evaluate(x, env);
-        if (_.isArray(v)) {
-          return Array(v);
-        }
-        return v;
-      });
-    }
-    if (ez === 'quote') {
-      v = expr[1];
-      if (v[0] === '"') {
-        return v.slice(1).replace(/[\\]"/g, '"');
-      }
-      return v;
+    if (!isNaN(expr)) {
+      return Number(expr);
     }
     if ((ge = get_env(expr, env))) {
       return ge;
     }
-    if (ez === "set" || ez === "set!" || ez === "setq") {
-      variable = env[expr[1]] = _evaluate(expr[2], env);
-      return variable;
+    if (ez in Settee.fn) {
+      return Settee.fn[ez](expr, env, _evaluate);
     }
-    if (ez === 'if') {
-      if (_evaluate(expr[1], env)) {
-        return _evaluate(expr[2], env);
-      }
-      if (expr.length <= 3) {
-        return "";
-      }
-      _.each(expr.slice(2, expr[expr.length - 2]), function(x, i) {
-        return _evaluate(x, env);
-      });
-      return _evaluate(expr[expr.length - 1], env);
+    if (expr in Settee.op) {
+      return Settee.op[expr];
     }
-    if (ez === 'cond') {
-      cases = expr.slice(1, expr.length);
-      for (_j = 0, _len1 = cases.length; _j < _len1; _j++) {
-        rule = cases[_j];
-        if (_evaluate(rule[0], env)) {
-          return _evaluate(rule[rule.length - 1]);
-        }
-      }
-      return null;
-    }
-    if (ez === 'each') {
-      source = expr[1][0];
-      res = [];
-      _ref1 = _evaluate(source, env);
-      for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
-        data = _ref1[_k];
-        newenv = data;
-        newenv['_parent'] = env;
-        res.push(_evaluate(expr[2], newenv));
-      }
-      return res.join('');
-    }
-    if (expr in operators) {
-      return operators[expr];
-    }
-    if (ez in tags) {
-      ev = function(src) {
-        return _evaluate(src, env);
-      };
-      return tags[ez](expr, ev);
+    if (ez in Settee.tags) {
+      return Settee.tags[ez](expr, env, _evaluate);
     } else if (typeof ez === 'string' && (parts = ez.split('.')).length > 1) {
-      if (parts[0] in tags) {
-        ev = function(src) {
-          return _evaluate(src, env);
-        };
-        return tags[parts[0]](expr, ev);
+      if (parts[0] in Settee.tags) {
+        return Settee.tags[parts[0]](expr, env, _evaluate);
       }
-    }
-    if (ez === 'lambda') {
-      return make_proc(expr[1], expr.slice(2), env);
-    }
-    if (ez === 'defun') {
-      return env[expr[1]] = make_proc(expr[2], expr.slice(3), env);
-    }
-    if (ez === 'js') {
-      return eval(expr[1]);
     }
     if (get_env('@auto_tag', env)) {
       ev = function(src) {
@@ -716,6 +865,7 @@ Returns a settee #object:
     }
     if (_.isArray(expr)) {
       return apply_to(_evaluate(ez, env), _.map(expr.slice(1), function(x, i) {
+        var v;
         v = _evaluate(x, env);
         if (_.isArray(v)) {
           return Array(v);

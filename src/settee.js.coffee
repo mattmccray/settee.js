@@ -1,5 +1,5 @@
 ###
-Settee.js v0.1
+Settee.js v0.2
 
        ________
       (        )
@@ -78,30 +78,17 @@ Returns a settee #object:
 # TODO
 # - Add '#' operation for comments
 # - Add '#!' operation for html comments
-# - Add 'has' operation to check for var in env
-# - Add support for :symbols that resolve to env variables only
 # - Return all nodes not just the last one? ... Leaning toward no
 # - Get mocha via node working
 # - Test in node
 # - Add support for npm
-# - Test in IE (yikes!)
-# - Cleanup _evaluate to pull ops and fn into objects instead of a ton of ifs
+
 
 class Settee
   @options:
     auto_balance: true
     auto_tag: false
     extended: true # nothing yet...
-
-  # For handling raw exprs
-  @op: {}
-    
-  # For handling evaluated exprs
-  @fn:
-    print: ->
-      str= ""
-      str += msg for msg in arguments
-      Settee._.log str
 
   @parse: (source, opts)->
     opts= _.defaults((opts or {}), Settee.options)
@@ -121,6 +108,36 @@ class Settee
 
   @to_html: (source, env={}, opts)->
     Settee(source, opts)(env)
+
+  @define: (tag, template, callback=false)->    
+    src_nodes= Settee.parse(template).pop()
+    _.log "Settee: Warning, overwriting tag #{tag}" if Settee.tags[tag]
+
+    Settee.tags[tag]=(expr, env, _evaluate)->
+      callback expr, env, _evaluate if callback
+      attrs= Settee._.extractAttrs expr
+      newenv= _parent: env, blocks:""
+      for atom,i in expr
+        newenv.blocks += newenv["block#{i}"]= Settee._.tag_builder atom, env, _evaluate if i > 0
+      src_nodes.splice(1,0,attrs...)
+      results= Settee._.tag_builder src_nodes, newenv, _evaluate
+      src_nodes.splice(1, attrs.length)
+      results
+
+    # track it...
+    Settee.define._tags or= []
+    Settee.define._tags.push tag
+    @
+
+  @undefine: (tag)->
+    if tag
+      delete Settee.tags[tag]
+    else
+      # remove all custom tags
+      for tagname in Settee.define._tags
+        delete Settee.tags[tagname]
+      Settee.define._tags= []
+
 
 
   # Main entry point (typically)
