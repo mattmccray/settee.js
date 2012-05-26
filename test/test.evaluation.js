@@ -56,13 +56,32 @@
       expect(Settee('(+ "My name is " name)')(ctx)).to.equal("My name is Matt");
       return expect(Settee('(p name)')(ctx)).to.equal('<p>Matt</p>');
     });
-    return it('should reference env variable by :symbol', function() {
+    it('should reference env variable by :symbol', function() {
       expect(Settee.to_html("(+ :name)", {
         name: "Matt"
       })).to.equal('Matt');
       return expect(Settee.to_html("(+ :city)", {
         city: "Dallas"
       })).to.equal('Dallas');
+    });
+    it('should support (if (expr))', function() {
+      var src;
+      src = '(if (eq :name "Matt")\n  (div "Hello!")\n  (div "Who?"))';
+      expect(Settee.to_html(src)).to.equal("<div>Who?</div>");
+      return expect(Settee.to_html(src, {
+        name: 'Matt'
+      })).to.equal("<div>Hello!</div>");
+    });
+    return it('should support (case (expr) (expr))', function() {
+      var src;
+      src = '(case\n  ((eq :name "Matt")\n    (div "Hi Matt!"))\n  ((eq :name "Dan")\n    (div "Hey Dan!"))';
+      expect(Settee.to_html(src, {
+        name: 'Matt'
+      })).to.equal("<div>Hi Matt!</div>");
+      expect(Settee.to_html(src, {
+        name: 'Dan'
+      })).to.equal("<div>Hey Dan!</div>");
+      return expect(Settee.to_html(src)).to.equal(null);
     });
   });
 

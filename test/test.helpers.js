@@ -92,16 +92,43 @@
         return expect(src).to.deep.equal(exp);
       });
     });
-    return describe('#parseAttrs()', function() {
+    describe('#parseAttrs()', function() {
       it('should parse id=main and id="main"', function() {
-        expect(Settee._.parseAttrs('id=main')).to.equal(' id="main"');
-        return expect(Settee._.parseAttrs('id="main"')).to.equal(' id="main"');
+        expect(Settee._.parseAttrs('id=main')).to.equal('id="main"');
+        return expect(Settee._.parseAttrs('id="main"')).to.equal('id="main"');
       });
       return it('should optionally return a hash', function() {
         return expect(Settee._.parseAttrs('id="main"', false)).to.deep.equal({
           key: 'id',
           value: 'main'
         });
+      });
+    });
+    describe("#replaceArrayVal()", function() {
+      return it('should replace a value within and array, recursively', function() {
+        var arr, narr;
+        arr = ['a', 'b', 'c'];
+        narr = Settee._.replaceArrayVal(arr, 'b', 'BEE');
+        return expect(narr).to.deep.equal(['a', 'BEE', 'c']);
+      });
+    });
+    return describe('#extractAttrs()', function() {
+      it('should remove attr atoms and return hash of values', function() {
+        var atts, src;
+        src = Settee.parse('(div id=main class=bob "HELLO"').pop();
+        atts = Settee._.extractAttrs(src, true);
+        expect(src).to.deep.equal(['div', '"HELLO']);
+        return expect(atts).to.deep.equal({
+          "class": 'bob',
+          id: 'main'
+        });
+      });
+      return it('should remove attr atoms and return array of attr strings', function() {
+        var atts, src;
+        src = Settee.parse('(div id=main class=bob "HELLO"').pop();
+        atts = Settee._.extractAttrs(src);
+        expect(src).to.deep.equal(['div', '"HELLO']);
+        return expect(atts).to.deep.equal(['id="main"', 'class="bob"']);
       });
     });
   });
