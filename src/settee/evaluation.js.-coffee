@@ -158,9 +158,9 @@ Settee.fn=
 
 
 # More LISP nerdery
-Settee.fn.cond= Settee
-Settee.fn.setq= Settee.fn['set!']= Settee
-Settee.fn.defun= Settee
+Settee.fn.cond= Settee.fn.case
+Settee.fn.setq= Settee.fn['set!']= Settee.fn.set
+Settee.fn.defun= Settee.fn.def
 
 
 # HTML Tags
@@ -182,17 +182,17 @@ get_env= (expr,env)->
   #false
   null
 
-has_env= (expr,env)->
-  return false if typeof(expr) isnt "string"
-  return true if expr of env
-  if (parts= expr.split('.')).length > 1
-    if parts[0] of env
-      obj=env
-      for part in parts
-        obj= obj[part] #if obj[part]
-      return true if obj != env # ???
-  return has_env(expr, env['_parent']) if '_parent' of env
-  false
+# has_env= (expr,env)->
+#   return false if typeof(expr) isnt "string"
+#   return true if expr of env
+#   if (parts= expr.split('.')).length > 1
+#     if parts[0] of env
+#       obj=env
+#       for part in parts
+#         obj= obj[part] #if obj[part]
+#       return true if obj != env # ???
+#   return has_env(expr, env['_parent']) if '_parent' of env
+#   false
 
 apply_to= (proc, args)->
   return proc.apply(@, args) if _.isFunction proc

@@ -1,6 +1,6 @@
 
 /*
-Settee.js v0.2
+Settee.js v0.3
 
        ________
       (        )
@@ -66,7 +66,7 @@ Returns a settee #object:
 
 
 (function() {
-  var ArrayProto, Settee, StringProto, apply_to, attrRE, breaker, can_apply_log, escapeRegExp, get_env, has_console, has_env, make_proc, nativeForEach, nativeIsArray, nativeMap, nativeTrim, quotedAttrRE, root, slice, tagName, _, _do_evaluate, _do_parse, _evaluate, _i, _len, _parser, _ref, _scanner,
+  var ArrayProto, Settee, StringProto, apply_to, attrRE, breaker, can_apply_log, escapeRegExp, get_env, has_console, make_proc, nativeForEach, nativeIsArray, nativeMap, nativeTrim, quotedAttrRE, root, slice, tagName, _, _do_evaluate, _do_parse, _evaluate, _i, _len, _parser, _ref, _scanner,
     __slice = [].slice,
     __hasProp = {}.hasOwnProperty;
 
@@ -102,7 +102,7 @@ Returns a settee #object:
       if (env == null) {
         env = {};
       }
-      return Settee(source, opts)(env);
+      return (new Settee(source, opts)).render(env);
     };
 
     Settee.define = function(tag, template, callback) {
@@ -183,7 +183,7 @@ Returns a settee #object:
 
   })();
 
-  ((typeof module !== "undefined" && module !== null ? module.exports : void 0) || window).Settee = Settee;
+  ((typeof module !== "undefined" && module !== null ? module.exports : void 0) || this).Settee = Settee;
 
   root = this;
 
@@ -732,11 +732,11 @@ Returns a settee #object:
     }
   };
 
-  Settee.fn.cond = Settee;
+  Settee.fn.cond = Settee.fn["case"];
 
-  Settee.fn.setq = Settee.fn['set!'] = Settee;
+  Settee.fn.setq = Settee.fn['set!'] = Settee.fn.set;
 
-  Settee.fn.defun = Settee;
+  Settee.fn.defun = Settee.fn.def;
 
   Settee.tags = {};
 
@@ -770,32 +770,6 @@ Returns a settee #object:
       return get_env(expr, env['_parent']);
     }
     return null;
-  };
-
-  has_env = function(expr, env) {
-    var obj, part, parts, _j, _len1;
-    if (typeof expr !== "string") {
-      return false;
-    }
-    if (expr in env) {
-      return true;
-    }
-    if ((parts = expr.split('.')).length > 1) {
-      if (parts[0] in env) {
-        obj = env;
-        for (_j = 0, _len1 = parts.length; _j < _len1; _j++) {
-          part = parts[_j];
-          obj = obj[part];
-        }
-        if (obj !== env) {
-          return true;
-        }
-      }
-    }
-    if ('_parent' in env) {
-      return has_env(expr, env['_parent']);
-    }
-    return false;
   };
 
   apply_to = function(proc, args) {

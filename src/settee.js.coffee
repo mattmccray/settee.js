@@ -1,5 +1,5 @@
 ###
-Settee.js v0.2
+Settee.js v0.3
 
        ________
       (        )
@@ -107,7 +107,7 @@ class Settee
     results.pop()
 
   @to_html: (source, env={}, opts)->
-    Settee(source, opts)(env)
+    (new Settee(source, opts)).render(env)
 
   @define: (tag, template, callback=false)->    
     src_nodes= Settee.parse(template).pop()
@@ -156,4 +156,4 @@ class Settee
   render: (ctx={})->
     Settee.evaluate(@code, ctx, @opts)
 
-(module?.exports || window).Settee= Settee
+(module?.exports || this).Settee= Settee
