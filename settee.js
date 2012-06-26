@@ -1,12 +1,12 @@
 (function() {
-  var attrRE, code_to_source, compile, custom_tags, escapeRegExp, global, nativeForEach, nativeIsArray, nativeMap, nativeTrim, old_settee, parse_source, quotedAttrRE, settee, slice, tag_builder, translate, _checkVar, _do_parse, _each, _isArray, _isString, _map, _parseAttrs, _parser, _scanner, _trim,
+  var VERSION, attrRE, code_to_source, compile, context, custom_tags, escapeRegExp, global, idRE, nativeForEach, nativeIsArray, nativeMap, nativeTrim, old_settee, parse_source, quotedAttrRE, settee, slice, tag_builder, translate, _checkVar, _do_parse, _each, _isArray, _isString, _map, _parseAttrs, _parser, _scanner, _trim,
     __hasProp = {}.hasOwnProperty;
+
+  VERSION = '0.5.0';
 
   global = this;
 
   old_settee = global.settee;
-
-  custom_tags = {};
 
   slice = Array.prototype.slice;
 
@@ -21,6 +21,8 @@
   quotedAttrRE = /([\w\-_\.]*)="([\w\-_:@\. ]*)"/;
 
   attrRE = /([\w\-_\.]*)=([\w\-_:@\.]*)/;
+
+  idRE = /(#[\w\-_]*)/;
 
   escapeRegExp = function(str) {
     return str.replace(/([-.*+?^${}()|[\]\/\\])/g, '\\$1');
@@ -126,7 +128,7 @@
 
   _checkVar = function(token) {
     if (token[0] === '@' || token[0] === ':') {
-      return "this." + (token.substring(1));
+      return "this.get('" + (token.substring(1)) + "')";
     } else {
       return token;
     }
@@ -194,13 +196,23 @@
   };
 
   translate = function(code, opts) {
-    var cname, i, new_code, parts, tag, token, _i, _j, _len, _len1;
+    var cname, i, id, new_code, parts, tag, token, _i, _j, _len, _len1;
     new_code = [];
     tag = code[0];
+    if (idRE.test(tag)) {
+      id = tag.match(idRE)[0].substring(1);
+      tag = tag.replace(idRE, '');
+      if (tag === '') {
+        tag = 'div';
+      }
+    }
     if (tag.indexOf('.') >= 0) {
       if (tag === '.') {
         tag = '.';
         new_code.push(tag);
+        if (id) {
+          new_code.push("id=" + id);
+        }
       } else {
         parts = tag.split('.');
         tag = parts.shift();
@@ -208,6 +220,9 @@
           tag = 'div';
         }
         new_code.push(tag);
+        if (id) {
+          new_code.push("id=" + id);
+        }
         for (_i = 0, _len = parts.length; _i < _len; _i++) {
           cname = parts[_i];
           new_code.push("class=" + cname);
@@ -215,6 +230,9 @@
       }
     } else {
       new_code.push(tag);
+      if (id) {
+        new_code.push("id=" + id);
+      }
     }
     for (i = _j = 0, _len1 = code.length; _j < _len1; i = ++_j) {
       token = code[i];
@@ -275,6 +293,53 @@
     return new Function(fn_name, "return " + source + ";");
   };
 
+  custom_tags = {
+    ".": function(tag, attrs, children) {
+      return children.join('');
+    },
+    "if": function(tag, attrs, children) {
+      var first;
+      first = children.shift();
+      if (first) {
+        return children.join('');
+      } else {
+        return '';
+      }
+    },
+    "unless": function(tag, attrs, children) {
+      var first;
+      first = children.shift();
+      if (!first) {
+        return children.join('');
+      } else {
+        return '';
+      }
+    },
+    "ifelse": function(tag, attrs, children) {
+      if (children[0]) {
+        return children[1];
+      } else {
+        return children[2];
+      }
+    },
+    "eq": function(tag, attrs, children) {
+      return children[0] === children[1];
+    },
+    "neq": function(tag, attrs, children) {
+      return children[0] !== children[1];
+    }
+  };
+
+  custom_tags['is'] = custom_tags['eq'];
+
+  custom_tags['='] = custom_tags['eq'];
+
+  custom_tags['isnt'] = custom_tags['neq'];
+
+  custom_tags['!='] = custom_tags['neq'];
+
+  custom_tags['+'] = custom_tags['.'];
+
   tag_builder = function(tag, attrs, children) {
     var attr_s, name, value;
     if (attrs == null) {
@@ -283,9 +348,7 @@
     if (children == null) {
       children = [];
     }
-    if (tag === '.') {
-      return children.join('');
-    } else if (custom_tags[tag]) {
+    if (custom_tags[tag]) {
       return custom_tags[tag](tag, attrs, children);
     } else {
       attr_s = '';
@@ -298,15 +361,40 @@
     }
   };
 
+  context = function(ctx) {
+    this.ctx = ctx;
+  };
+
+  context.prototype.get = function(path) {
+    var data, name, nextname, parts;
+    parts = path.split('.');
+    name = parts.shift();
+    data = this.ctx[name];
+    while (parts.length && (data != null)) {
+      nextname = parts.shift();
+      data = data[nextname];
+      if (data) {
+        name = nextname;
+      }
+    }
+    return data || '';
+  };
+
+  context.prototype.has = function(path) {
+    return this.get(path) && this.get(path) !== '';
+  };
+
   settee = function(source) {
     var code, fn;
     code = parse_source(source);
     code = translate(code);
     fn = compile(code);
-    return function(ctx) {
-      if (ctx == null) {
-        ctx = {};
+    return function(src_ctx) {
+      var ctx;
+      if (src_ctx == null) {
+        src_ctx = {};
       }
+      ctx = new context(src_ctx);
       return fn.call(ctx, tag_builder);
     };
   };
@@ -358,6 +446,8 @@
   };
 
   settee.tag_builder = tag_builder;
+
+  settee.version = VERSION;
 
   if ((typeof module !== "undefined" && module !== null ? module.exports : void 0) != null) {
     module.exports.settee = settee;

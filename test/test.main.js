@@ -19,7 +19,7 @@ if( typeof(settee) == 'undefined' && typeof(expect) == 'undefined' && typeof(req
 
   expected_output = '<html><head><title>Test</title></head><body><p>...</p></body></html>';
 
-  describe('settee()', function() {
+  describe("settee() v" + settee.version, function() {
     it('should exist', function() {
       expect(settee).to.not.be.undefined;
       return expect(settee).to.be.a('function');
@@ -73,6 +73,30 @@ if( typeof(settee) == 'undefined' && typeof(expect) == 'undefined' && typeof(req
         city: "Dallas"
       })).to.equal('Dallas');
     });
+    it('should support (if expr, ifpasses...)', function() {
+      var src;
+      src = '(if (eq :name "Matt")\n  (div "Hello!"))';
+      expect(settee.to_html(src)).to.equal("");
+      return expect(settee.to_html(src, {
+        name: 'Matt'
+      })).to.equal("<div>Hello!</div>");
+    });
+    it('should support (ifelse expr, truelist, falselist)', function() {
+      var src;
+      src = '(ifelse (eq :name "Matt")\n  (div "Hello!")\n  (div "Who?"))';
+      expect(settee.to_html(src)).to.equal("<div>Who?</div>");
+      return expect(settee.to_html(src, {
+        name: 'Matt'
+      })).to.equal("<div>Hello!</div>");
+    });
+    it('should support (unless expr, iffails...)', function() {
+      var src;
+      src = '(unless (is :name "Matt")\n  (div "Hello!"))';
+      expect(settee.to_html(src)).to.equal("<div>Hello!</div>");
+      return expect(settee.to_html(src, {
+        name: 'Matt'
+      })).to.equal("");
+    });
     describe("generated output", function() {
       var _this = this;
       it("should return an html string", function() {
@@ -94,16 +118,25 @@ if( typeof(settee) == 'undefined' && typeof(expect) == 'undefined' && typeof(req
         expect(settee('(div.list)')()).to.equal('<div class="list"></div>');
         return expect(settee.to_html('(div.list.active)')).to.equal('<div class="list active"></div>');
       });
-      it("should default to div for (.list.active) with auto_tag", function() {
-        expect(settee.to_html('(section.list)', {}, {
-          auto_tag: true
-        })).to.equal('<section class="list"></section>');
-        expect(settee.to_html('(.list)', {}, {
-          auto_tag: true
-        })).to.equal('<div class="list"></div>');
-        return expect(settee.to_html('(.list.active)', {}, {
-          auto_tag: true
-        })).to.equal('<div class="list active"></div>');
+      it("should default to div for (.list.active)", function() {
+        expect(settee.to_html('(.list)')).to.equal('<div class="list"></div>');
+        expect(settee.to_html('(.list.active)')).to.equal('<div class="list active"></div>');
+        return expect(settee.to_html('(.list#main)')).to.equal('<div id="main" class="list"></div>');
+      });
+      it("should add id shortcut (div#main)", function() {
+        expect(settee('(div#main)')()).to.equal('<div id="main"></div>');
+        return expect(settee.to_html('(div#main.list.active)')).to.equal('<div id="main" class="list active"></div>');
+      });
+      it("should default to div for (#main)", function() {
+        expect(settee.to_html('(#main)')).to.equal('<div id="main"></div>');
+        expect(settee.to_html('(#main.test)')).to.equal('<div id="main" class="test"></div>');
+        return expect(settee.to_html('(.test#main)')).to.equal('<div id="main" class="test"></div>');
+      });
+      it("should allow mixing shortcut types (div#main.container)", function() {
+        expect(settee.to_html('(div#main.list)')).to.equal('<div id="main" class="list"></div>');
+        expect(settee.to_html('(div#main.list.active)')).to.equal('<div id="main" class="list active"></div>');
+        expect(settee.to_html('(div.list#main.active)')).to.equal('<div id="main" class="list active"></div>');
+        return expect(settee.to_html('(div.list.active#main)')).to.equal('<div id="main" class="list active"></div>');
       });
       it('should support auto_tag generation: <crap></crap> for (crap)', function() {
         var res;

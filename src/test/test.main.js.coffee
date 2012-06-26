@@ -23,7 +23,7 @@ source_inline='(html (head (title "Test")) (body (p "...")))'
 expected_output= '<html><head><title>Test</title></head><body><p>...</p></body></html>'
 
 
-describe 'settee()', ->
+describe "settee() v#{ settee.version }", ->
   it 'should exist', ->
     expect(settee).to.not.be.undefined
     expect(settee).to.be.a('function')
@@ -67,14 +67,30 @@ describe 'settee()', ->
     expect(settee("(. @name)")(name:"Matt")).to.equal('Matt')
     expect(settee("(. @city)")(city:"Dallas")).to.equal('Dallas')
 
-  # it 'should support (if (expr))', ->
-  #   src='''
-  #       (if (eq :name "Matt")
-  #         (div "Hello!")
-  #         (div "Who?"))
-  #       '''
-  #   expect(Settee.to_html(src)).to.equal("<div>Who?</div>")
-  #   expect(Settee.to_html(src, name:'Matt')).to.equal("<div>Hello!</div>")
+  it 'should support (if expr, ifpasses...)', ->
+    src='''
+        (if (eq :name "Matt")
+          (div "Hello!"))
+        '''
+    expect(settee.to_html(src)).to.equal("")
+    expect(settee.to_html(src, name:'Matt')).to.equal("<div>Hello!</div>")
+
+  it 'should support (ifelse expr, truelist, falselist)', ->
+    src='''
+        (ifelse (eq :name "Matt")
+          (div "Hello!")
+          (div "Who?"))
+        '''
+    expect(settee.to_html(src)).to.equal("<div>Who?</div>")
+    expect(settee.to_html(src, name:'Matt')).to.equal("<div>Hello!</div>")
+
+  it 'should support (unless expr, iffails...)', ->
+    src='''
+        (unless (is :name "Matt")
+          (div "Hello!"))
+        '''
+    expect(settee.to_html(src)).to.equal("<div>Hello!</div>")
+    expect(settee.to_html(src, name:'Matt')).to.equal("")
 
   describe "generated output", ->
   
@@ -95,10 +111,25 @@ describe 'settee()', ->
       expect(settee('(div.list)')()).to.equal('<div class="list"></div>')
       expect(settee.to_html('(div.list.active)')).to.equal('<div class="list active"></div>')
 
-    it "should default to div for (.list.active) with auto_tag", ->
-      expect(settee.to_html('(section.list)',{},auto_tag:yes)).to.equal('<section class="list"></section>')
-      expect(settee.to_html('(.list)',{},auto_tag:yes)).to.equal('<div class="list"></div>')
-      expect(settee.to_html('(.list.active)',{},auto_tag:yes)).to.equal('<div class="list active"></div>')
+    it "should default to div for (.list.active)", ->
+      expect(settee.to_html('(.list)')).to.equal('<div class="list"></div>')
+      expect(settee.to_html('(.list.active)')).to.equal('<div class="list active"></div>')
+      expect(settee.to_html('(.list#main)')).to.equal('<div id="main" class="list"></div>')
+
+    it "should add id shortcut (div#main)", ->
+      expect(settee('(div#main)')()).to.equal('<div id="main"></div>')
+      expect(settee.to_html('(div#main.list.active)')).to.equal('<div id="main" class="list active"></div>')
+
+    it "should default to div for (#main)", ->
+      expect(settee.to_html('(#main)')).to.equal('<div id="main"></div>')
+      expect(settee.to_html('(#main.test)')).to.equal('<div id="main" class="test"></div>')
+      expect(settee.to_html('(.test#main)')).to.equal('<div id="main" class="test"></div>')
+
+    it "should allow mixing shortcut types (div#main.container)", ->
+      expect(settee.to_html '(div#main.list)' ).to.equal('<div id="main" class="list"></div>')
+      expect(settee.to_html '(div#main.list.active)' ).to.equal('<div id="main" class="list active"></div>')
+      expect(settee.to_html '(div.list#main.active)' ).to.equal('<div id="main" class="list active"></div>')
+      expect(settee.to_html '(div.list.active#main)' ).to.equal('<div id="main" class="list active"></div>')
     
     it 'should support auto_tag generation: <crap></crap> for (crap)', ->
       res= settee.to_html('(crap)')

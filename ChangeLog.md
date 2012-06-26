@@ -1,3 +1,8 @@
+# v0.5
+- Now supports id shortcut `(div#main)` #=> `<div id="main"></div>`
+- Added safer data retrieval - swallows bad data refs
+- Added helper tags if, eq, nq
+
 # v0.4
 - Performance overhaul. No longer evaluates an array on every render. Instead it compiles source into an executable function.
 

@@ -2,7 +2,7 @@
   "author": "Matt McCray <matt@elucidata.net> (http://www.elucidata.net)",
   "name": "settee-templates",
   "description": "The s-expression template engine.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "homepage": "http://darthapo.github.com/settee.js/",
   "repository": {
     "type": "git",

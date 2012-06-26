@@ -1,7 +1,7 @@
 # Helpers
+VERSION= '0.5.0'
 global= @
 old_settee= global.settee
-custom_tags= {}
 slice= Array::slice
 nativeForEach= Array::forEach
 nativeMap= Array::.map
@@ -9,6 +9,7 @@ nativeIsArray= Array.isArray
 nativeTrim= String::trim
 quotedAttrRE= /([\w\-_\.]*)="([\w\-_:@\. ]*)"/
 attrRE= /([\w\-_\.]*)=([\w\-_:@\.]*)/
+idRE= /(#[\w\-_]*)/
 # From MooTools core 1.2.4
 escapeRegExp= (str)-> str.replace /([-.*+?^${}()|[\]\/\\])/g, '\\$1'
 
@@ -73,7 +74,7 @@ _parseAttrs= (val, as_string=yes)->
 
 _checkVar= (token)->
   if token[0] is '@' or token[0] is ':'
-    "this.#{ token.substring(1) }"
+    "this.get('#{ token.substring(1) }')"
   else
     token
 
@@ -127,25 +128,39 @@ parse_source= (source, opts)->
 translate= (code, opts)->
   new_code=[]
   tag= code[0]
+
+  if idRE.test tag
+    id= tag.match(idRE)[0].substring(1)
+    tag= tag.replace(idRE, '')
+    tag= 'div' if tag is ''
+
   if tag.indexOf('.') >= 0
     if tag is '.'
       tag= '.'
       new_code.push tag
+      new_code.push "id=#{id}" if id
+    
     else
       parts= tag.split('.')
       tag= parts.shift()
       tag= 'div' if tag is ''
       new_code.push tag
+      new_code.push "id=#{id}" if id
+
       for cname in parts
         new_code.push "class="+ cname
+  
   else
     new_code.push tag
+    new_code.push "id=#{id}" if id
+  
   for token,i in code
     if i > 0
       if _isArray(token)
         new_code.push translate(token, opts)
       else
         new_code.push token
+  
   new_code
 
 code_to_source= (code, fn_name)->
@@ -191,10 +206,43 @@ compile= (code, opts)->
   source= code_to_source code, fn_name
   new Function fn_name, "return #{ source };"
 
-tag_builder= (tag, attrs={}, children=[])->
-  if tag is '.'
+custom_tags= 
+  ".": (tag, attrs, children)-> 
     children.join ''
-  else if custom_tags[tag]
+
+  "if": (tag, attrs, children)->
+    first= children.shift()
+    if first
+      children.join ''
+    else
+      ''
+  "unless": (tag, attrs, children)->
+    first= children.shift()
+    if !first
+      children.join ''
+    else
+      ''
+
+  "ifelse": (tag, attrs, children)->
+    if children[0]
+      children[1]
+    else
+      children[2]
+
+  "eq": (tag, attrs, children)->
+    children[0] == children[1]
+  
+  "neq": (tag, attrs, children)->
+    children[0] != children[1]
+
+custom_tags['is']= custom_tags['eq']
+custom_tags['=']= custom_tags['eq']
+custom_tags['isnt']= custom_tags['neq']
+custom_tags['!=']= custom_tags['neq']
+custom_tags['+']= custom_tags['.']
+
+tag_builder= (tag, attrs={}, children=[])->
+  if custom_tags[tag]
     custom_tags[tag](tag, attrs, children)
   else
     attr_s= ''
@@ -202,11 +250,27 @@ tag_builder= (tag, attrs={}, children=[])->
       attr_s+= " #{ name }=\"#{ value }\""
     """<#{ tag + attr_s }>#{ children.join '' }</#{ tag }>"""
 
+context= (@ctx)->
+context::get= (path)->
+  parts= path.split('.')
+  name= parts.shift()
+  data= @ctx[name]
+  while parts.length and data?
+    nextname= parts.shift()
+    data= data[nextname]
+    name= nextname if data
+  # throw "#{name} doesn't contain a #{nextname}" unless data?
+  data || ''
+context::has= (path)->
+  @get(path) and @get(path) isnt ''
+
+
 settee= (source)->
   code= parse_source source
   code= translate code
   fn= compile code
-  (ctx={})->
+  (src_ctx={})->
+    ctx= new context src_ctx
     fn.call ctx, tag_builder
 
 settee.to_html= (source, ctx={}, opts)->
@@ -238,6 +302,7 @@ settee.noConflict= ()->
   settee
 
 settee.tag_builder= tag_builder
+settee.version= VERSION
 
 if module?.exports?
   module.exports.settee= settee

@@ -43,3 +43,27 @@ task :test do
   #system('mocha')
   system('open test/index.html')
 end
+
+
+# No desc cause it's dependent on my local project folders
+task :update_doc_dir do
+  dev_dir= File.expand_path './'
+  doc_dir= File.expand_path '../settee-docs/'
+  puts "Moving files from #{ dev_dir } to #{ doc_dir }"
+  files= "settee.js settee.min.js ChangeLog.md ReadMe.md".split
+  folders= "test bench lib".split
+  files.each do |filename|
+    puts " cp #{File.join(dev_dir, filename)} #{File.join(doc_dir, filename)}"
+    FileUtils.cp File.join(dev_dir, filename), File.join(doc_dir, filename)
+  end
+  folders.each do |filename|
+    puts " cp -r #{File.join(dev_dir, filename)} #{File.dirname(File.join(doc_dir, filename))}"
+    FileUtils.cp_r File.join(dev_dir, filename), File.dirname(File.join(doc_dir, filename))
+  end
+end
+task :update_docsite => :update_doc_dir do
+  doc_dir= File.expand_path '../settee-docs/'
+  system("cd #{doc_dir} && git ar .")
+  system("cd #{doc_dir} && git commit -m 'Update settee.js, the tests and benchmarks.'")
+  system("cd #{doc_dir} && git push")
+end
