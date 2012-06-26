@@ -1,159 +1,245 @@
-###
-Settee.js v0.3
+# Helpers
+global= @
+old_settee= global.settee
+custom_tags= {}
+slice= Array::slice
+nativeForEach= Array::forEach
+nativeMap= Array::.map
+nativeIsArray= Array.isArray
+nativeTrim= String::trim
+quotedAttrRE= /([\w\-_\.]*)="([\w\-_:@\. ]*)"/
+attrRE= /([\w\-_\.]*)=([\w\-_:@\.]*)/
+# From MooTools core 1.2.4
+escapeRegExp= (str)-> str.replace /([-.*+?^${}()|[\]\/\\])/g, '\\$1'
 
-       ________
-      (        )
-     ()________()
-     ||________||
-     '          '
+_map
+_map= (obj, iterator, context)->
+  results = []
+  return results if obj is null
+  return obj.map(iterator, context) if nativeMap and obj.map is nativeMap
+  _each obj, (value, index, list) ->
+    results[results.length]= iterator.call(context, value, index, list)
+  results.length = obj.length if obj.length is +obj.length
+  results
 
-An s-expression template engine with no external dependencies.
+_each= (obj, iterator, context)->
+  return if obj is null
+  if nativeForEach and obj.forEach is nativeForEach
+    obj.forEach iterator, context
 
-**Templates look like this:**
+  else if obj.length is +obj.length
+    for item,idx in obj
+      return if idx of obj and iterator.call(context, item, idx, obj) is breaker
 
-    (html
-      (head
-        (title "Hello")
-        (script src="/js/my-app.js"))
-      (body
-        (article
-          (section.main
-            (p "Welcome to my site, " name "!")))
-        (aside.sidebar
-            (ul
-              (li
-                (a href="/index.html" "Home"))))))
+  else
+    for own key,item of obj
+      return if iterator.call(context, item, key, obj) is breaker
 
-**Use it like this:**
+# Find something better than RegExp?  
+_trim= (str, char)->
+  return "" if str is null
+  return nativeTrim.call(str) if !char and nativeTrim
+  char= if char
+    escapeRegExp(char)
+  else
+    '\\s'
+  str.replace new RegExp('\^[' + characters + ']+|[' + characters + ']+$', 'g'), ''
+  str.replace /^[#{char}]+|[#{char}]+$/g, ''
 
-    var template= Settee(source, { auto_balance:true }),
-        html= template({ name:"Matt" })
+_isString= (obj) -> 
+  # !!(obj is '' or (obj and obj.charCodeAt and obj.substr))
+  typeof obj is 'string'
 
-It's great to drink coffee while lounging on the settee!
+_isArray= nativeIsArray or (obj) ->
+  !!(obj and obj.concat and obj.unshift and not obj.callee)
 
-    template= Settee source, auto_balance:yes
-    html= template name:"Matt"
+# Attribute stuff?
+_parseAttrs= (val, as_string=yes)->
+  if _isString(val)
+    if quotedAttrRE.test(val)
+      # Ewok.log("matches", val.match(quotedAttrRE))
+      [full,key,value]= val.match(quotedAttrRE)
+      return "#{key}=\"#{value}\"" if as_string
+      {key,value}
+    else if attrRE.test(val)
+      # Ewok.log("matches", val.match(attrRE))
+      [full,key,value]= val.match(attrRE)
+      return "#{key}=\"#{value}\"" if as_string
+      {key,value}
+    else
+      false
+  else
+    false
 
-It can be classy too!
+_checkVar= (token)->
+  if token[0] is '@' or token[0] is ':'
+    "this.#{ token.substring(1) }"
+  else
+    token
 
-    template= new Settee(source, auto_balance:yes, auto_tag:yes)
-    html= template.render name:"Matt"
+# called with parse_object as this
+_scanner= ->
+  return "" if @text.length is 0
+  start= 0
+  index= 1
+  delta= 0
+  fc= @text.charAt(0)
+  if fc is '(' or fc is ')'
+    index= 1
+    @balanced += if fc is '(' then 1 else -1
+  else if fc is '"'
+    index= @text.search(/[^\\]"/) + 1
+    delta=1 # bizarre bugfix... need to investigate further
+  else if fc is "'"
+    index= @text.search(/[^\\]'/) + 1
+    delta=1 # bizarre bugfix... need to investigate further
+  else
+    index= @text.search(/[ \n)]/)
+  index= @text.length if index < 1
+  t= @text.substring start, index
+  @text= _trim @text.substring(index + delta)
+  t
 
-## Method Signature
+_parser= ->
+  result=[]
+  token= _scanner.apply(@)
+  while token isnt ')' and token isnt ""
+    expr= if token is '(' then _parser.apply(@) else token
+    result.push expr
+    token= _scanner.apply(@)
+  result
 
-As function:
-
-    Settee( source:string [, options:object] )
-
-Returns a #template function:
-
-    template( context:object, helpers:object )
-
-As class:
-
-    new Settee( source:string [, options:object] )
-
-Returns a settee #object:
-
-    object.render( context:object, helpers:object )
-
-## Options
-
-* auto_balance:Bool  -- ignore imbalanced parens (default:true)
-* auto_tag:Bool      -- unknown actions create tags (default:false)
-
-###
-
-#= require_self
-
-# Using a -coffee extension hack so that Sprockets won't compile
-# the coffeescript before it includes it. (I don't want multiple
-# closures for this one file.)
-
-#= include settee/helpers.js.-coffee
-#= include settee/parser.js.-coffee
-#= include settee/evaluation.js.-coffee
-
-
-# TODO
-# - Add '#' operation for comments
-# - Add '#!' operation for html comments
-# - Return all nodes not just the last one? ... Leaning toward no
-# - Get mocha via node working
-# - Test in node
-# - Add support for npm
+_do_parse= (source)->
+  parse_data=
+    text: _trim(source)
+    balanced: 0
+  code= ['list']
+  while parse_data.text.length
+    exprs=_parser.apply(parse_data)
+    code= code.concat exprs
+  [code, parse_data]
 
 
-class Settee
-  @options:
-    auto_balance: true
-    auto_tag: false
-    extended: true # nothing yet...
-
-  @parse: (source, opts)->
-    opts= _.defaults((opts or {}), Settee.options)
+parse_source= (source, opts)->
     [code, info]= _do_parse(source)
-    error= if info.balanced > 0
-      "The expression is not balanced. Add #{info.balanced} parentheses."
-    else if info.balanced < 0
-      "The expression is not balanced. Remove #{Math.abs info.balanced} parentheses."
+    code.pop()
+
+translate= (code, opts)->
+  new_code=[]
+  tag= code[0]
+  if tag.indexOf('.') >= 0
+    if tag is '.'
+      tag= '.'
+      new_code.push tag
     else
-      no
-    throw error if error and !opts.auto_balance
-    code
+      parts= tag.split('.')
+      tag= parts.shift()
+      tag= 'div' if tag is ''
+      new_code.push tag
+      for cname in parts
+        new_code.push "class="+ cname
+  else
+    new_code.push tag
+  for token,i in code
+    if i > 0
+      if _isArray(token)
+        new_code.push translate(token, opts)
+      else
+        new_code.push token
+  new_code
 
-  @evaluate: (code, env={}, opts)->
-    results= _do_evaluate(code, env, opts)
-    results.pop()
+code_to_source= (code, fn_name)->
+  params= []
+  attrs={}
+  tag= code.shift()
 
-  @to_html: (source, env={}, opts)->
-    (new Settee(source, opts)).render(env)
-
-  @define: (tag, template, callback=false)->    
-    src_nodes= Settee.parse(template).pop()
-    _.log "Settee: Warning, overwriting tag #{tag}" if Settee.tags[tag]
-
-    Settee.tags[tag]=(expr, env, _evaluate)->
-      callback expr, env, _evaluate if callback
-      attrs= Settee._.extractAttrs expr
-      newenv= _parent: env, blocks:""
-      for atom,i in expr
-        newenv.blocks += newenv["block#{i}"]= Settee._.tag_builder atom, env, _evaluate if i > 0
-      src_nodes.splice(1,0,attrs...)
-      results= Settee._.tag_builder src_nodes, newenv, _evaluate
-      src_nodes.splice(1, attrs.length)
-      results
-
-    # track it...
-    Settee.define._tags or= []
-    Settee.define._tags.push tag
-    @
-
-  @undefine: (tag)->
-    if tag
-      delete Settee.tags[tag]
+  for token in code
+    if _isArray token
+      params.push code_to_source(token, fn_name)
     else
-      # remove all custom tags
-      for tagname in Settee.define._tags
-        delete Settee.tags[tagname]
-      Settee.define._tags= []
+      if att= _parseAttrs(token, no)
+        key= att.key
+        value= _checkVar(att.value)
+        if attrs[key]
+          attrs[key] += " "+ value
+        else
+          attrs[key]= value
+      else if token[0] is '"' or token[0] is "'"
+        params.push JSON.stringify token.substring(1)
+      else if token[0] is '@' or token[0] is ":"
+        params.push _checkVar(token)
+      else
+        params.push JSON.stringify token
 
+  attr_str= ''
+  for own key,value of attrs
+    attr_str += unless String(key).indexOf('this.') is 0
+        JSON.stringify(key)
+      else
+        key
+    attr_str += ':'
+    attr_str += unless String(value).indexOf('this.') is 0
+        JSON.stringify(value)
+      else
+        value
+    attr_str += ","
 
+  "#{ fn_name }('#{tag}', { #{ attr_str.substr(0,attr_str.length-1) } }, [#{ params.join ', ' }])"
 
-  # Main entry point (typically)
-  constructor: (source, opts)->
-    opts= _.defaults((opts or {}), Settee.options)
-    code= Settee.parse(source, opts)
-    if @ is root # called as function
-      return (ctx={})->
-        Settee.evaluate(code, ctx, opts)
+compile= (code, opts)->
+  fn_name= 'b'
+  source= code_to_source code, fn_name
+  new Function fn_name, "return #{ source };"
 
-    else  # called as constructor
-      @source= source
-      @opts= opts
-      @code= code
+tag_builder= (tag, attrs={}, children=[])->
+  if tag is '.'
+    children.join ''
+  else if custom_tags[tag]
+    custom_tags[tag](tag, attrs, children)
+  else
+    attr_s= ''
+    for own name,value of attrs
+      attr_s+= " #{ name }=\"#{ value }\""
+    """<#{ tag + attr_s }>#{ children.join '' }</#{ tag }>"""
 
-  render: (ctx={})->
-    Settee.evaluate(@code, ctx, @opts)
+settee= (source)->
+  code= parse_source source
+  code= translate code
+  fn= compile code
+  (ctx={})->
+    fn.call ctx, tag_builder
 
-(module?.exports || this).Settee= Settee
+settee.to_html= (source, ctx={}, opts)->
+  settee(source)(ctx)
+
+settee.define= (tag, handler)->
+  if _isString handler
+    sub_template= settee(handler)
+    handler= do(sub_template)->
+      (tag, attrs, children)->
+        ctx=
+          blocks: children.join('')
+          yield: children.join('')
+        for elem,i in children
+          ctx["block#{ i + 1 }"]= elem
+        sub_template(ctx)
+  custom_tags[tag]= handler
+  settee
+
+settee.undefine= (tag)->
+  delete custom_tags[tag] if custom_tags[tag]
+  settee
+
+settee.noConflict= ()->
+  if old_settee
+    global.settee= old_settee  
+  else
+    delete global.settee
+  settee
+
+settee.tag_builder= tag_builder
+
+if module?.exports?
+  module.exports.settee= settee
+else
+  global.settee= settee

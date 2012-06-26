@@ -1,0 +1,195 @@
+<html>
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <title>Blam Benchmarks</title>
+    <script src="../lib/benchmark.js"></script>
+    <script src="../lib/kablam.js"></script>
+    <script src="../settee.min.js"></script>
+    <script src="http://darthapo.github.com/blam.js/blam.min.js"></script>
+    <script src="https://raw.github.com/visionmedia/jade/master/jade.js"></script>
+    <style type="text/css" media="screen">
+    html {
+      /*background: #CCC;*/
+      padding: 25px;
+    }
+    body {
+      font: 20px/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif;
+      width: 600px;
+      margin: 0 auto;
+      background: #FFF;
+      /*border: 1px solid #eee;
+      border-radius: 4px;*/
+    }
+    .results {
+      color: green;
+      padding-bottom: 10px;
+      font-weight: 200;
+    }
+    h2 {
+      /*font-size: 1em;*/
+      font-size: 1.2em;
+      font-weight: 200;
+      margin-top: 0px;
+      padding-top: 0px;
+    }
+    h2 button{
+      float: right;
+    }
+    .error h2 {
+      color: maroon !important;
+    }
+    .error .results {
+      color: red;
+    }
+    .results div {
+      color: red;
+    }
+    .benchmark {
+      /*border-bottom: 1px solid silver;*/
+      margin-bottom: 25px;
+      font-size: .8em;
+      /*font-size: 12px;*/
+      border-radius: 4px;
+      padding: 10px 25px;
+
+      border: 1px solid #eee;
+      border-bottom-color: #DDD;
+      -webkit-box-shadow: 0 1px 3px #eee;
+      box-shadow: 0 1px 3px #eee;
+    }
+    /*.benchmark:hover {
+      background: #F0F0F0;
+    }*/
+    .benchmark:last-child {
+      /*margin-bottom: 0px;*/
+    }
+    dl {
+      font-weight: normal;
+      font-size: .8em;
+    }
+    dt {
+
+    }
+    dd {
+      padding-left: 1em;
+      margin-left: 0px;
+      font-family: monospace;
+      color: gray;
+      font-size: 11px
+    }
+    </style>
+    <script>
+    var _counter= 1,
+        _all_suites= {},
+        _bench_tmpl= kablam.compile(function(bench){
+          return section({ 'class':'benchmark' },
+            h2(bench.desc, " ", button({ id:("run"+ bench.id) }, 'Run')),
+            each(bench.tests, function(t){
+              return dl(
+                dt("• ", t.desc),
+                dd({ id:"res_"+ t.id })
+              )
+            }),
+            div({ id:("out"+ bench.id), 'class':'results' })
+          );
+        }),
+        _bench_error_tmpl= kablam.compile(function(bench, ex){
+          return section({ 'class':'benchmark error' },
+            h2(bench.desc),
+            div({ id:("out"+ bench.id), 'class':'results' },
+              h4('Exception:'),
+              pre(ex)
+            )
+          );
+        });
+      
+    function benchmark(description, block) {
+      var _suite= new Benchmark.Suite(description),
+          bench= {
+            id: "_"+ (_counter++),
+            desc: description,
+            suite: _suite,
+            active: false,
+            tests: [],
+            on: function(event, handler) {
+              _suite.on(event, handler);
+              return this;
+            },
+            add: function(msg, test){
+              var _id= 't_'+ (_counter++);
+              this.tests.push({
+                id: _id,
+                desc: msg,
+                test: test
+              })
+              _suite.add(msg, test, {
+                onStart: function(event){
+                  // console.log("STARTED!", _id, event)
+                  document.getElementById('res_'+ _id).innerHTML='...';
+                },
+                onComplete: function(event, bench){
+                  bench= (!bench) ? event.target : bench;
+                  // console.log("FINISHED!", _id, bench)
+                  document.getElementById('res_'+ _id).innerHTML= String(bench).replace(msg,'');
+                }
+              });
+              return this;
+            }
+          };
+    
+      function puts(msg) {
+        document.getElementById("out"+ bench.id).innerHTML = msg;
+      }
+      
+      bench.suite
+        .on('start', function(event, bench){
+          bench= (!bench) ? event.target : bench;
+          // console.log(bench)
+          // puts("Testing...");
+        })
+        .on('cycle', function(event, bench) {
+          bench= (!bench) ? event.target : bench;
+          // console.log(description, String(bench), bench, arguments, this);
+          // puts(String(bench));
+        })
+        .on('complete', function() {
+          // console.log(description, 'Fastest is ' + this.filter('fastest').pluck('name'));
+          // puts(" ")
+          msg= 'Fastest: ' + this.filter('fastest').pluck('name')
+          if(bench.tests.length > 2)
+            msg += '<div>Slowest: '+ this.filter('slowest').pluck('name') +'</div>';
+          puts(msg)
+          bench.active= false;
+        });
+    
+      if(block) {
+        try {
+          block.call(bench, bench);
+          bench.elem= _bench_tmpl(bench)
+        } catch (ex) {
+          bench.elem= _bench_error_tmpl(bench, ex)
+        }
+      }
+      
+
+      document.body.appendChild(bench.elem)
+      
+      var runBtn= document.getElementById('run'+ bench.id);
+      if(runBtn)
+        runBtn.onclick= function(){
+          if(!bench.active) {
+            bench.active= true;
+            bench.suite.run({ 'async': true });
+          }
+        }
+      
+      
+      return bench;
+    }
+  
+    </script>
+  </head>
+  <body>
+  </body>
+  <script src="benchmarks.js"></script>
+</html>

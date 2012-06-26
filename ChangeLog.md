@@ -1,3 +1,6 @@
+# v0.4
+- Performance overhaul. No longer evaluates an array on every render. Instead it compiles source into an executable function.
+
 # v0.3
 - Tweaked Settee.to_html to work in node.js and JavaScriptCore
 
