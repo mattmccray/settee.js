@@ -1,3 +1,6 @@
+# v0.5.1
+- Build tool updates.
+
 # v0.5
 - Now supports id shortcut `(div#main)` #=> `<div id="main"></div>`
 - Added safer data retrieval - swallows bad data refs

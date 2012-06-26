@@ -1,5 +1,9 @@
+###
+  Settee v<%= config.version %> -- http://darthapo.github.com/settee.js/
+###
+
 # Helpers
-VERSION= '0.5.0'
+VERSION= '<%= config.version %>'
 global= @
 old_settee= global.settee
 slice= Array::slice
@@ -13,7 +17,6 @@ idRE= /(#[\w\-_]*)/
 # From MooTools core 1.2.4
 escapeRegExp= (str)-> str.replace /([-.*+?^${}()|[\]\/\\])/g, '\\$1'
 
-_map
 _map= (obj, iterator, context)->
   results = []
   return results if obj is null

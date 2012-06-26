@@ -2,11 +2,12 @@
 
 configure do
   set :site_title,   "Sette"
+  set :version,      "0.5.1"
   set :site_tagline, "The s-expression template engine."
   set :site_author,  "Matt McCray"
   set :site_url,     "https://github.com/darthapo/settee.js"
-  set :output_dir, "./"
-  set :source_dir, "./src"
+  set :output_dir,   "./"
+  set :source_dir,   "./src"
   # For dev server...
   set :server_timeout, 3 # seconds...
 end
@@ -18,9 +19,9 @@ skip 'index.html'
 
 generate do
 
-  sprockets 'settee.js', :src=>'settee.js', :paths=>['./lib'], :prune=>false, :root=>'./src', :compress=>false
+  # sprockets 'settee.js', :src=>'settee.js', :paths=>['./lib'], :prune=>false, :root=>'./src', :compress=>false
 
-  sprockets 'settee.min.js', :src=>'settee.js', :paths=>['./lib'], :prune=>false, :root=>'./src', :compress=>:packr
+  # sprockets 'settee.min.js', :src=>'settee.js', :paths=>['./lib'], :prune=>false, :root=>'./src', :compress=>:packr
 
   # for test with build server (run rake serve):
   %w(chai.js mocha.css mocha.js benchmark.js).each do |libname|
@@ -29,8 +30,47 @@ generate do
       IO.read(path)
     end
   end
+  
   page 'index.html' do
     '<script>document.location="/test/index.html";</script>'
   end
+
+  page 'package.json' do
+    <<-EOS
+{
+  "author": "Matt McCray <matt@elucidata.net> (http://www.elucidata.net)",
+  "name": "settee-templates",
+  "description": "The s-expression template engine.",
+  "version": "#{ config.version }",
+  "homepage": "http://darthapo.github.com/settee.js/",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/darthapo/settee.js.git"
+  },
+  "main": "settee.js",
+  "engines": {
+    "node": "~0.6"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "chai": "~1.0.4"
+  },
+  "optionalDependencies": {}
+}
+    EOS
+  end
    
+end
+
+on_end do |site|
+  require 'packr'
+  lines= IO.readlines('settee.js')
+  File.open 'settee.min.js', 'w' do |f|
+    f.write "// Settee v#{ site.config.version } -- http://darthapo.github.com/settee.js/\n"
+    f.write Packr.pack( lines.join(''), 
+                        :shrink_vars => true, 
+                        :base62      => false, 
+                        :private     => false)
+  end
+  site.report "[Compressed settee.min.js]"
 end

@@ -40,8 +40,8 @@ end
 desc "Builds and tests settee.js"
 task :test do
   system('bundle exec gumdrop -q -b')
-  #system('mocha')
-  system('open test/index.html')
+  system('mocha')
+  # system('open test/index.html')
 end
 
 

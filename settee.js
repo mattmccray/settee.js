@@ -1,8 +1,14 @@
+
+/*
+  Settee v0.5.1 -- http://darthapo.github.com/settee.js/
+*/
+
+
 (function() {
   var VERSION, attrRE, code_to_source, compile, context, custom_tags, escapeRegExp, global, idRE, nativeForEach, nativeIsArray, nativeMap, nativeTrim, old_settee, parse_source, quotedAttrRE, settee, slice, tag_builder, translate, _checkVar, _do_parse, _each, _isArray, _isString, _map, _parseAttrs, _parser, _scanner, _trim,
     __hasProp = {}.hasOwnProperty;
 
-  VERSION = '0.5.0';
+  VERSION = '0.5.1';
 
   global = this;
 
@@ -27,9 +33,6 @@
   escapeRegExp = function(str) {
     return str.replace(/([-.*+?^${}()|[\]\/\\])/g, '\\$1');
   };
-
-  _map;
-
 
   _map = function(obj, iterator, context) {
     var results;
