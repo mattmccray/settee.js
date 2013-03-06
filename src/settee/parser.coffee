@@ -1,11 +1,8 @@
-###
-  Settee v<%= config.version %> -- http://darthapo.github.com/settee.js/
-###
 
 # Helpers
-VERSION= '<%= config.version %>'
-global= @
-old_settee= global.settee
+unless module?
+  global= @
+  old_settee= global.settee
 slice= Array::slice
 nativeForEach= Array::forEach
 nativeMap= Array::.map
@@ -128,6 +125,11 @@ parse_source= (source, opts)->
     [code, info]= _do_parse(source)
     code.pop()
 
+if exports?
+  exports.parse_source= parse_source
+else
+  @parse_source= parse_source
+
 translate= (code, opts)->
   new_code=[]
   tag= code[0]
@@ -165,6 +167,12 @@ translate= (code, opts)->
         new_code.push token
   
   new_code
+
+if exports?
+  exports.translate= translate
+else
+  @translate= translate
+
 
 code_to_source= (code, fn_name)->
   params= []
@@ -204,110 +212,18 @@ code_to_source= (code, fn_name)->
 
   "#{ fn_name }('#{tag}', { #{ attr_str.substr(0,attr_str.length-1) } }, [#{ params.join ', ' }])"
 
+if exports?
+  exports.code_to_source= code_to_source
+else
+  @code_to_source= code_to_source
+
 compile= (code, opts)->
   fn_name= 'b'
   source= code_to_source code, fn_name
   new Function fn_name, "return #{ source };"
 
-custom_tags= 
-  ".": (tag, attrs, children)-> 
-    children.join ''
-
-  "if": (tag, attrs, children)->
-    first= children.shift()
-    if first
-      children.join ''
-    else
-      ''
-  "unless": (tag, attrs, children)->
-    first= children.shift()
-    if !first
-      children.join ''
-    else
-      ''
-
-  "ifelse": (tag, attrs, children)->
-    if children[0]
-      children[1]
-    else
-      children[2]
-
-  "eq": (tag, attrs, children)->
-    children[0] == children[1]
-  
-  "neq": (tag, attrs, children)->
-    children[0] != children[1]
-
-custom_tags['is']= custom_tags['eq']
-custom_tags['=']= custom_tags['eq']
-custom_tags['isnt']= custom_tags['neq']
-custom_tags['!=']= custom_tags['neq']
-custom_tags['+']= custom_tags['.']
-
-tag_builder= (tag, attrs={}, children=[])->
-  if custom_tags[tag]
-    custom_tags[tag](tag, attrs, children)
-  else
-    attr_s= ''
-    for own name,value of attrs
-      attr_s+= " #{ name }=\"#{ value }\""
-    """<#{ tag + attr_s }>#{ children.join '' }</#{ tag }>"""
-
-context= (@ctx)->
-context::get= (path)->
-  parts= path.split('.')
-  name= parts.shift()
-  data= @ctx[name]
-  while parts.length and data?
-    nextname= parts.shift()
-    data= data[nextname]
-    name= nextname if data
-  # throw "#{name} doesn't contain a #{nextname}" unless data?
-  data || ''
-context::has= (path)->
-  @get(path) and @get(path) isnt ''
-
-
-settee= (source)->
-  code= parse_source source
-  code= translate code
-  fn= compile code
-  (src_ctx={})->
-    ctx= new context src_ctx
-    fn.call ctx, tag_builder
-
-settee.to_html= (source, ctx={}, opts)->
-  settee(source)(ctx)
-
-settee.define= (tag, handler)->
-  if _isString handler
-    sub_template= settee(handler)
-    handler= do(sub_template)->
-      (tag, attrs, children)->
-        ctx=
-          blocks: children.join('')
-          yield: children.join('')
-        for elem,i in children
-          ctx["block#{ i + 1 }"]= elem
-        sub_template(ctx)
-  custom_tags[tag]= handler
-  settee
-
-settee.undefine= (tag)->
-  delete custom_tags[tag] if custom_tags[tag]
-  settee
-
-settee.noConflict= ()->
-  if old_settee
-    global.settee= old_settee  
-  else
-    delete global.settee
-  settee
-
-settee.tag_builder= tag_builder
-settee.version= VERSION
-
-if module?.exports?
-  module.exports.settee= settee
+if exports?
+  exports.compile= compile
 else
-  global.settee= settee
+  @compile= compile
+

@@ -1,3 +1,9 @@
+# v0.6
+- Made it easier to use in node
+- Cleaned up source
+- Added precompile feature (primarily for build tools like AssemBot)
+- Removed all Ruby dependencies from build, now uses standard Makefile
+
 # v0.5.1
 - Build tool updates.
 

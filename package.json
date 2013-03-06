@@ -2,19 +2,19 @@
   "author": "Matt McCray <matt@elucidata.net> (http://www.elucidata.net)",
   "name": "settee-templates",
   "description": "The s-expression template engine.",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "homepage": "http://darthapo.github.com/settee.js/",
   "repository": {
     "type": "git",
     "url": "git://github.com/darthapo/settee.js.git"
   },
-  "main": "settee.js",
+  "main": "./lib/settee/index.js",
   "engines": {
-    "node": "~0.6"
+    "node": "~0.8"
   },
   "dependencies": {},
   "devDependencies": {
-    "chai": "~1.0.4"
+    "coffee-script": "~1.6.1"
   },
   "optionalDependencies": {}
 }
