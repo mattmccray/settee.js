@@ -147,7 +147,29 @@ describe "settee() v#{ settee.version }", ->
       res= settee.render(src, city:"Dallas")
       expect(res).to.equal("<div>Hello Dallas</div>")
 
+    it 'should render precompiled templates', ->
+      tmp= settee.precompile '(html (body :city'
+      res= settee.render(tmp, city:"Dallas")  
+      expect(res).to.equal("<html><body>Dallas</body></html>")      
+
+      res= settee(tmp)  
+      expect(res(city:"Dallas")).to.equal("<html><body>Dallas</body></html>")      
+
     it 'should allow creating custom tags / helpers', ->
+      settee.define 'widget', '(div.widget (div.body :block1'
+      src= '''
+          (widget
+            (div "Hello!"))
+          '''
+      output= settee.render(src)
+      expected= '<div class="widget"><div class="body"><div>Hello!</div></div></div>'
+      expect(output).to.equal(expected)
+
+      settee.undefine('widget')
+      # The only way we can tell if it's gone is if auto-tagging returns
+      expect(settee('(widget)')()).to.equal "<widget></widget>"
+
+    it 'should allow creating custom tags / helpers from precompiled templates', ->
       settee.define 'widget', '(div.widget (div.body :block1'
       src= '''
           (widget

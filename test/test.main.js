@@ -157,7 +157,29 @@ describe("settee() v" + settee.version, function() {
       });
       return expect(res).to.equal("<div>Hello Dallas</div>");
     });
+    it('should render precompiled templates', function() {
+      var res, tmp;
+      tmp = settee.precompile('(html (body :city');
+      res = settee.render(tmp, {
+        city: "Dallas"
+      });
+      expect(res).to.equal("<html><body>Dallas</body></html>");
+      res = settee(tmp);
+      return expect(res({
+        city: "Dallas"
+      })).to.equal("<html><body>Dallas</body></html>");
+    });
     it('should allow creating custom tags / helpers', function() {
+      var expected, output, src;
+      settee.define('widget', '(div.widget (div.body :block1');
+      src = '(widget\n  (div "Hello!"))';
+      output = settee.render(src);
+      expected = '<div class="widget"><div class="body"><div>Hello!</div></div></div>';
+      expect(output).to.equal(expected);
+      settee.undefine('widget');
+      return expect(settee('(widget)')()).to.equal("<widget></widget>");
+    });
+    it('should allow creating custom tags / helpers from precompiled templates', function() {
       var expected, output, src;
       settee.define('widget', '(div.widget (div.body :block1');
       src = '(widget\n  (div "Hello!"))';

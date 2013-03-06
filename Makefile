@@ -7,9 +7,11 @@ build:
 
 dist:
 	cat settee.js | uglifyjs -m > settee.min.js
+
+gzip:
 	gzip -c settee.min.js > settee.min.js.gz
 	gzip -c settee.runtime.js > settee.runtime.js.gz
 
-
 watch:
 	coffee -w -b -o ./lib -c ./src
+

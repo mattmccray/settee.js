@@ -218,7 +218,7 @@ else
   @code_to_source= code_to_source
 
 compile= (code, opts)->
-  fn_name= 'b'
+  fn_name= 's'
   source= code_to_source code, fn_name
   new Function fn_name, "return #{ source };"
 

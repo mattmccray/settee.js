@@ -302,7 +302,7 @@
 
   compile = function(code, opts) {
     var fn_name, source;
-    fn_name = 'b';
+    fn_name = 's';
     source = code_to_source(code, fn_name);
     return new Function(fn_name, "return " + source + ";");
   };
@@ -453,7 +453,7 @@
   VERSION = '0.6.0';
 
   if (typeof module !== "undefined" && module !== null) {
-    _ref = require('./parser'), parse_source = _ref.parse_source, translate = _ref.translate, compile = _ref.compile;
+    _ref = require('./parser'), parse_source = _ref.parse_source, translate = _ref.translate, compile = _ref.compile, _isString = _ref._isString, _isArray = _ref._isArray;
     context = require('./context');
     tag = require('./tag');
   }
@@ -478,7 +478,7 @@
     if (wrap == null) {
       wrap = true;
     }
-    fn = compile(code);
+    fn = typeof code === 'function' ? code : compile(code);
     if (!wrap) {
       return fn;
     }
@@ -502,18 +502,20 @@
     var code, tmpl_fn;
     code = settee.parse(source);
     tmpl_fn = settee.compile(code, false);
-    return tmpl_fn.toString();
+    return tmpl_fn;
   };
 
   settee.define = function(tagName, handler) {
     var sub_template;
-    if (_isString(handler)) {
+    if (_isString(handler || handler.length === 1)) {
       sub_template = settee(handler);
       handler = (function(sub_template) {
         return function(tagName, attrs, children) {
           var childcontent, ctx, elem, i, _i, _len;
           childcontent = children.join('');
           ctx = {
+            tagName: tagName,
+            attrs: attrs,
             blocks: childcontent,
             "yield": childcontent
           };

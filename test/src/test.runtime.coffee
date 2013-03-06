@@ -23,7 +23,8 @@ source_inline= '(html (head (title "Test")) (body (p "...")))'
 expected_output= '<html><head><title>Test</title></head><body><p>...</p></body></html>'
 
 precompile= (src)->
-  fullSettee.compile fullSettee.parse(src), false
+  fullSettee.precompile src
+  # fullSettee.compile fullSettee.parse(src), false
 
 describe "settee() v#{ settee.version }", ->
   it 'should exist', ->
@@ -153,7 +154,7 @@ describe "settee() v#{ settee.version }", ->
     it 'should allow creating custom tags / helpers from other precompiled templates', ->
       tmp= precompile '(div.widget (div.body :block1'
       settee.define 'widget', tmp
-      console.log tmp
+      # console.log tmp
       src=  precompile '''
           (widget
             (div "Hello!"))

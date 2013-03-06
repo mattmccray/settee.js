@@ -2,7 +2,7 @@
 VERSION= '0.6.0'
 
 if module?
-  {parse_source, translate, compile}= require './parser'
+  {parse_source, translate, compile, _isString, _isArray}= require './parser'
   context= require './context'
   tag= require './tag'
 
@@ -20,7 +20,7 @@ settee.render= (source, ctx={})->
 settee.to_html= settee.render
 
 settee.compile= (code, wrap=true)->
-  fn= compile code
+  fn= if typeof code is 'function' then code else compile code
   return fn unless wrap
   (src_ctx={})->
     ctx= new context src_ctx
@@ -33,15 +33,18 @@ settee.parse= (source)->
 settee.precompile= (source)->
   code= settee.parse source
   tmpl_fn= settee.compile code, false
-  tmpl_fn.toString()
+  # tmpl_fn.toString()
+  tmpl_fn
 
 settee.define= (tagName, handler)->
-  if _isString handler
+  if _isString handler or handler.length is 1
     sub_template= settee(handler)
     handler= do(sub_template)->
       (tagName, attrs, children)->
         childcontent= children.join('')
         ctx=
+          tagName: tagName
+          attrs: attrs
           blocks: childcontent
           yield: childcontent
         for elem,i in children

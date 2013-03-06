@@ -19,7 +19,7 @@ source_inline = '(html (head (title "Test")) (body (p "...")))';
 expected_output = '<html><head><title>Test</title></head><body><p>...</p></body></html>';
 
 precompile = function(src) {
-  return fullSettee.compile(fullSettee.parse(src), false);
+  return fullSettee.precompile(src);
 };
 
 describe("settee() v" + settee.version, function() {
@@ -165,7 +165,6 @@ describe("settee() v" + settee.version, function() {
       var expected, output, src, tmp;
       tmp = precompile('(div.widget (div.body :block1');
       settee.define('widget', tmp);
-      console.log(tmp);
       src = precompile('(widget\n  (div "Hello!"))');
       output = settee.render(src);
       expected = '<div class="widget"><div class="body"><div>Hello!</div></div></div>';

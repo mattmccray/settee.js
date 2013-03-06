@@ -22,8 +22,8 @@ settee.define= (tagName, handler)->
   if _isString handler
     throw new Error "The runtime version of settee does not support parsing template strings, only precompiled templates."
   else if handler.length is 1 # A precompiled template
-    sub_template= handler
-    wrapped_handler= do(sub_template)->
+    sub_template= settee(handler)
+    handler= do(sub_template)->
       (tagName, attrs, children)->
         childcontent= children.join('')
         ctx=
@@ -33,8 +33,20 @@ settee.define= (tagName, handler)->
           yield: childcontent
         for elem,i in children
           ctx["block#{ i + 1 }"]= elem
-        settee.render(sub_template, ctx)
-    tag.define tagName, wrapped_handler
+        sub_template(ctx)
+    # sub_template= handler
+    # wrapped_handler= do(sub_template)->
+    #   (tagName, attrs, children)->
+    #     childcontent= children.join('')
+    #     ctx=
+    #       tagName: tagName
+    #       attrs: attrs
+    #       blocks: childcontent
+    #       yield: childcontent
+    #     for elem,i in children
+    #       ctx["block#{ i + 1 }"]= elem
+    #     settee.render(sub_template, ctx)
+    tag.define tagName, handler
   else # A raw handler
     tag.define tagName, handler
   settee
