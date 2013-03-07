@@ -1,3 +1,7 @@
+# v0.7
+- Added support for simple looping
+- if tag now takes three params: tester, success_list, failure_list
+
 # v0.6
 - Made it easier to use in node
 - Cleaned up source

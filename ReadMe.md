@@ -137,6 +137,26 @@ anything around them. This is because Settee expects to have only one root list.
 <div>One</div><div>Two</div>
 ```
 
+Settee also support simple looping. Each loop has access to `:item` and `:index` 
+in the render context.
+
+```lisp
+(ul
+  (loop :items
+    (li data-id=:index :item)
+  )
+  ```
+```javascript
+settee.render( src, { items:["A", 'B'] } );
+```
+```html
+<ul>
+  <li data-id="0">A</li>
+  <li data-id="1">B</li>
+</ul>
+```
+
+
 ## Method Signatures
 
 As function:

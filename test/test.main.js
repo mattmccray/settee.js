@@ -72,7 +72,7 @@ describe("settee() v" + settee.version, function() {
       city: "Dallas"
     })).to.equal('Dallas');
   });
-  it('should support (if expr, ifpasses...)', function() {
+  it('should support (if expr, truelist)', function() {
     var src;
     src = '(if (eq :name "Matt")(div "Hello!"))';
     expect(settee.render(src)).to.equal("");
@@ -95,6 +95,30 @@ describe("settee() v" + settee.version, function() {
     return expect(settee.render(src, {
       name: 'Matt'
     })).to.equal("");
+  });
+  it('should support simple looping over an Array', function() {
+    var data, src;
+    src = '(ul.list\n  (loop :list\n    (li.item :item)\n  )\n)';
+    data = {
+      list: ["Matt", "Dan", "Sam"]
+    };
+    return expect(settee.render(src, data)).to.equal('<ul class="list"><li class="item">Matt</li><li class="item">Dan</li><li class="item">Sam</li></ul>');
+  });
+  it('should support simple looping over an Array of Objects', function() {
+    var data, src;
+    src = '(ul.list\n  (loop :list\n    (li.item :item.name)\n  )\n)';
+    data = {
+      list: [
+        {
+          name: "Matt"
+        }, {
+          name: "Dan"
+        }, {
+          name: "Sam"
+        }
+      ]
+    };
+    return expect(settee.render(src, data)).to.equal('<ul class="list"><li class="item">Matt</li><li class="item">Dan</li><li class="item">Sam</li></ul>');
   });
   describe("generated output", function() {
     var _this = this;

@@ -95,6 +95,44 @@ describe "settee() v#{ settee.version }", ->
     expect(settee.render(src)).to.equal("<div>Hello!</div>")
     expect(settee.render(src, name:'Matt')).to.equal("")
 
+  it 'should support simple looping over an Array', ->
+    src= precompile '''
+          (ul.list
+            (loop :list
+              (li.item :item)
+            )
+          )
+        '''
+    data= {
+      list: [
+        "Matt"
+        "Dan"
+        "Sam"
+      ]
+    }
+    expect(settee.render(src, data)).to.equal(
+      '<ul class="list"><li class="item">Matt</li><li class="item">Dan</li><li class="item">Sam</li></ul>'
+    )
+
+  it 'should support simple looping over an Array of Objects', ->
+    src= precompile '''
+          (ul.list
+            (loop :list
+              (li.item :item.name)
+            )
+          )
+        '''
+    data= {
+      list: [
+        { name:"Matt" }
+        { name:"Dan" }
+        { name:"Sam" }
+      ]
+    }
+    expect(settee.render(src, data)).to.equal(
+      '<ul class="list"><li class="item">Matt</li><li class="item">Dan</li><li class="item">Sam</li></ul>'
+    )
+
   describe "generated output", ->
   
     it "should return an html string", ->

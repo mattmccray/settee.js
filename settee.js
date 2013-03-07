@@ -291,7 +291,11 @@
       attr_str += String(value).indexOf('this.') !== 0 ? JSON.stringify(value) : value;
       attr_str += ",";
     }
-    return "" + fn_name + "('" + tag + "', { " + (attr_str.substr(0, attr_str.length - 1)) + " }, [" + (params.join(', ')) + "])";
+    if (tag === 'loop' || tag === 'each') {
+      return "" + fn_name + "('" + tag + "', { " + (attr_str.substr(0, attr_str.length - 1)) + " }, " + (params.shift()) + ", function(){return [" + (params.join(', ')) + "]; })";
+    } else {
+      return "" + fn_name + "('" + tag + "', { " + (attr_str.substr(0, attr_str.length - 1)) + " }, [" + (params.join(', ')) + "])";
+    }
   };
 
   if (typeof exports !== "undefined" && exports !== null) {
@@ -360,30 +364,24 @@
     tag.prototype["+"] = tag.prototype['.'];
 
     tag.prototype["if"] = function(tag, attrs, children) {
-      var first;
+      var first, _ref, _ref1;
       first = children.shift();
       if (first) {
-        return children.join('');
+        return (_ref = children[0]) != null ? _ref : '';
       } else {
-        return '';
+        return (_ref1 = children[1]) != null ? _ref1 : '';
       }
     };
+
+    tag.prototype.ifelse = tag.prototype["if"];
 
     tag.prototype.unless = function(tag, attrs, children) {
-      var first;
+      var first, _ref, _ref1;
       first = children.shift();
       if (!first) {
-        return children.join('');
+        return (_ref = children[0]) != null ? _ref : '';
       } else {
-        return '';
-      }
-    };
-
-    tag.prototype.ifelse = function(tag, attrs, children) {
-      if (children[0]) {
-        return children[1];
-      } else {
-        return children[2];
+        return (_ref1 = children[1]) != null ? _ref1 : '';
       }
     };
 
@@ -400,6 +398,23 @@
     };
 
     tag.prototype['!'] = tag.prototype.eq;
+
+    tag.prototype.loop = function(tag, attrs, items, block) {
+      var children, ctx, i, item, _i, _len;
+      children = [];
+      ctx = new context({
+        items: items
+      });
+      for (i = _i = 0, _len = items.length; _i < _len; i = ++_i) {
+        item = items[i];
+        ctx.ctx.item = item;
+        ctx.ctx.index = i;
+        children.push(block.call(ctx));
+      }
+      return children.join('');
+    };
+
+    tag.prototype.each = tag.prototype.loop;
 
     tag.prototype.neq = function(tag, attrs, children) {
       return children[0] !== children[1];
@@ -428,7 +443,7 @@
         children = [];
       }
       if (instance[tag]) {
-        return instance[tag](tag, attrs, children);
+        return instance[tag].apply(instance[tag], arguments);
       } else {
         attr_s = '';
         for (name in attrs) {
@@ -450,7 +465,7 @@
     this.tag = tag;
   }
 
-  VERSION = '0.6.0';
+  VERSION = '0.7.0';
 
   if (typeof module !== "undefined" && module !== null) {
     _ref = require('./parser'), parse_source = _ref.parse_source, translate = _ref.translate, compile = _ref.compile, _isString = _ref._isString, _isArray = _ref._isArray;

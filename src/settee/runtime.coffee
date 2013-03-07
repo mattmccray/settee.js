@@ -1,6 +1,6 @@
 # You shouldn't use this directly, the build tool uses this as the index for the runtime-only version
 
-VERSION= '0.6.0'
+VERSION= '0.7.0'
 
 _isString= (obj) ->  typeof obj is 'string'
 
@@ -34,18 +34,6 @@ settee.define= (tagName, handler)->
         for elem,i in children
           ctx["block#{ i + 1 }"]= elem
         sub_template(ctx)
-    # sub_template= handler
-    # wrapped_handler= do(sub_template)->
-    #   (tagName, attrs, children)->
-    #     childcontent= children.join('')
-    #     ctx=
-    #       tagName: tagName
-    #       attrs: attrs
-    #       blocks: childcontent
-    #       yield: childcontent
-    #     for elem,i in children
-    #       ctx["block#{ i + 1 }"]= elem
-    #     settee.render(sub_template, ctx)
     tag.define tagName, handler
   else # A raw handler
     tag.define tagName, handler

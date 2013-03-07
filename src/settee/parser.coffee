@@ -209,8 +209,10 @@ code_to_source= (code, fn_name)->
       else
         value
     attr_str += ","
-
-  "#{ fn_name }('#{tag}', { #{ attr_str.substr(0,attr_str.length-1) } }, [#{ params.join ', ' }])"
+  if tag is 'loop' or tag is 'each'
+    "#{ fn_name }('#{tag}', { #{ attr_str.substr(0,attr_str.length-1) } }, #{ params.shift() }, function(){return [#{ params.join ', ' }]; })"
+  else
+    "#{ fn_name }('#{tag}', { #{ attr_str.substr(0,attr_str.length-1) } }, [#{ params.join ', ' }])"
 
 if exports?
   exports.code_to_source= code_to_source

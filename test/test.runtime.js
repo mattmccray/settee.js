@@ -100,6 +100,30 @@ describe("settee() v" + settee.version, function() {
       name: 'Matt'
     })).to.equal("");
   });
+  it('should support simple looping over an Array', function() {
+    var data, src;
+    src = precompile('(ul.list\n  (loop :list\n    (li.item :item)\n  )\n)');
+    data = {
+      list: ["Matt", "Dan", "Sam"]
+    };
+    return expect(settee.render(src, data)).to.equal('<ul class="list"><li class="item">Matt</li><li class="item">Dan</li><li class="item">Sam</li></ul>');
+  });
+  it('should support simple looping over an Array of Objects', function() {
+    var data, src;
+    src = precompile('(ul.list\n  (loop :list\n    (li.item :item.name)\n  )\n)');
+    data = {
+      list: [
+        {
+          name: "Matt"
+        }, {
+          name: "Dan"
+        }, {
+          name: "Sam"
+        }
+      ]
+    };
+    return expect(settee.render(src, data)).to.equal('<ul class="list"><li class="item">Matt</li><li class="item">Dan</li><li class="item">Sam</li></ul>');
+  });
   describe("generated output", function() {
     var _this = this;
     it("should return an html string", function() {

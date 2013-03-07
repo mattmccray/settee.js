@@ -1,5 +1,5 @@
 
-VERSION= '0.6.0'
+VERSION= '0.7.0'
 
 if module?
   {parse_source, translate, compile, _isString, _isArray}= require './parser'
