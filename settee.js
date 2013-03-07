@@ -566,6 +566,7 @@
 
   if (typeof module !== "undefined" && module !== null) {
     module.exports = settee;
+    module.exports.__express = require('./express');
   } else {
     this.settee = settee;
   }

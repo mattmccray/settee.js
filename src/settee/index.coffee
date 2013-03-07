@@ -69,6 +69,7 @@ settee.version= VERSION
 
 if module?
   module.exports= settee
+  module.exports.__express= require './express'
 else
   @settee= settee
  

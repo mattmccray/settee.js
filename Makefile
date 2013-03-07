@@ -14,4 +14,3 @@ gzip:
 
 watch:
 	coffee -w -b -o ./lib -c ./src
-
