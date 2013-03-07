@@ -6,7 +6,7 @@ if( typeof(settee) == 'undefined' && typeof(expect) == 'undefined' && typeof(req
   expect= require('chai').expect;
 }
 })(this);
-var expected_output, global, source_indented, source_inline, _set;
+var expected_output, global, precompile, source_indented, source_inline, _set;
 
 global = this;
 
@@ -18,6 +18,10 @@ source_inline = '(html (head (title "Test")) (body (p "...")))';
 
 expected_output = '<html><head><title>Test</title></head><body><p>...</p></body></html>';
 
+precompile = function(src) {
+  return fullSettee.precompile(src);
+};
+
 describe("settee() v" + settee.version, function() {
   it('should exist', function() {
     expect(settee).to.not.be.undefined;
@@ -25,34 +29,34 @@ describe("settee() v" + settee.version, function() {
   });
   it("should generate <html> for (html)", function() {
     var result, tmpl;
-    tmpl = settee('(html)');
+    tmpl = settee(precompile('(html)'));
     result = tmpl();
     expect(result).to.be.an('string');
     return expect(result).to.equal("<html></html>");
   });
   it('should generate <html lang="en"> for (html lang="en")', function() {
     var result, tmpl;
-    tmpl = settee('(html  lang="en")');
+    tmpl = settee(precompile('(html  lang="en")'));
     result = tmpl();
     expect(result).to.be.an('string');
     return expect(result).to.equal('<html lang="en"></html>');
   });
   it('should generate <html lang="en"> for (html lang=en)', function() {
     var result, tmpl;
-    tmpl = settee('(html  lang=en)');
+    tmpl = settee(precompile('(html  lang=en)'));
     result = tmpl();
     expect(result).to.be.an('string');
     return expect(result).to.equal('<html lang="en"></html>');
   });
   it('should generate properly nested html', function() {
     var result, tmpl;
-    tmpl = settee(source_inline);
+    tmpl = settee(precompile(source_inline));
     result = tmpl();
     expect(result).to.be.an('string');
     return expect(result).to.equal(expected_output);
   });
   it('should not generate a tag for .', function() {
-    return expect(settee('(. "Hello")')()).to.equal('Hello');
+    return expect(settee(precompile('(. "Hello")'))()).to.equal('Hello');
   });
   it('should reference data from context as :varname', function() {
     var ctx;
@@ -60,21 +64,21 @@ describe("settee() v" + settee.version, function() {
       name: 'Matt',
       city: 'Dallas'
     };
-    expect(settee('(. :name)')(ctx)).to.equal(ctx.name);
-    expect(settee('(p "My name is " :name)')(ctx)).to.equal("<p>My name is Matt</p>");
-    return expect(settee('(p @name)')(ctx)).to.equal('<p>Matt</p>');
+    expect(settee(precompile('(. :name)'))(ctx)).to.equal(ctx.name);
+    expect(settee(precompile('(p "My name is " :name)'))(ctx)).to.equal("<p>My name is Matt</p>");
+    return expect(settee(precompile('(p @name)'))(ctx)).to.equal('<p>Matt</p>');
   });
   it('should reference env variable by @symbol too', function() {
-    expect(settee("(. @name)")({
+    expect(settee(precompile("(. @name)"))({
       name: "Matt"
     })).to.equal('Matt');
-    return expect(settee("(. @city)")({
+    return expect(settee(precompile("(. @city)"))({
       city: "Dallas"
     })).to.equal('Dallas');
   });
-  it('should support (if expr, truelist)', function() {
+  it('should support (if expr, ifpasses...)', function() {
     var src;
-    src = '(if (eq :name "Matt")(div "Hello!"))';
+    src = precompile('(if (eq :name "Matt")\n  (div "Hello!"))');
     expect(settee.render(src)).to.equal("");
     return expect(settee.render(src, {
       name: 'Matt'
@@ -82,7 +86,7 @@ describe("settee() v" + settee.version, function() {
   });
   it('should support (ifelse expr, truelist, falselist)', function() {
     var src;
-    src = '(ifelse (eq :name "Matt")\n  (div "Hello!")\n  (div "Who?"))';
+    src = precompile('(ifelse (eq :name "Matt")\n  (div "Hello!")\n  (div "Who?"))');
     expect(settee.render(src)).to.equal("<div>Who?</div>");
     return expect(settee.render(src, {
       name: 'Matt'
@@ -90,7 +94,7 @@ describe("settee() v" + settee.version, function() {
   });
   it('should support (unless expr, iffails...)', function() {
     var src;
-    src = '(unless (is :name "Matt")\n  (div "Hello!"))';
+    src = precompile('(unless (is :name "Matt")\n  (div "Hello!"))');
     expect(settee.render(src)).to.equal("<div>Hello!</div>");
     return expect(settee.render(src, {
       name: 'Matt'
@@ -98,7 +102,7 @@ describe("settee() v" + settee.version, function() {
   });
   it('should support simple looping over an Array', function() {
     var data, src;
-    src = '(ul.list\n  (loop :list\n    (li.item :item)\n  )\n)';
+    src = precompile('(ul.list\n  (loop :list\n    (li.item :item)\n  )\n)');
     data = {
       list: ["Matt", "Dan", "Sam"]
     };
@@ -106,7 +110,7 @@ describe("settee() v" + settee.version, function() {
   });
   it('should support simple looping over an Array of Objects', function() {
     var data, src;
-    src = '(ul.list\n  (loop :list\n    (li.item :item.name)\n  )\n)';
+    src = precompile('(ul.list\n  (loop :list\n    (li.item :item.name)\n  )\n)');
     data = {
       list: [
         {
@@ -124,94 +128,73 @@ describe("settee() v" + settee.version, function() {
     var _this = this;
     it("should return an html string", function() {
       var html, t;
-      t = settee(source_inline);
+      t = settee(precompile(source_inline));
       html = t();
       return expect(html).to.equal(expected_output);
     });
     it("should not care about source whitespace (indention)", function() {
       var t;
-      t = settee(source_indented);
+      t = settee(precompile(source_indented));
       return expect(t()).to.equal(expected_output);
     });
     it("should support quoted or unquoted attributes", function() {
-      expect(settee('(div id="main")')()).to.equal('<div id="main"></div>');
-      return expect(settee('(div id=main)')()).to.equal('<div id="main"></div>');
+      expect(settee(precompile('(div id="main")'))()).to.equal('<div id="main"></div>');
+      return expect(settee(precompile('(div id=main)'))()).to.equal('<div id="main"></div>');
     });
     it("should add class shortcuts (div.list.active)", function() {
-      expect(settee('(div.list)')()).to.equal('<div class="list"></div>');
-      return expect(settee.render('(div.list.active)')).to.equal('<div class="list active"></div>');
+      expect(settee(precompile('(div.list)'))()).to.equal('<div class="list"></div>');
+      return expect(settee.render(precompile('(div.list.active)'))).to.equal('<div class="list active"></div>');
     });
     it("should default to div for (.list.active)", function() {
-      expect(settee.render('(.list)')).to.equal('<div class="list"></div>');
-      expect(settee.render('(.list.active)')).to.equal('<div class="list active"></div>');
-      return expect(settee.render('(.list#main)')).to.equal('<div id="main" class="list"></div>');
+      expect(settee.render(precompile('(.list)'))).to.equal('<div class="list"></div>');
+      expect(settee.render(precompile('(.list.active)'))).to.equal('<div class="list active"></div>');
+      return expect(settee.render(precompile('(.list#main)'))).to.equal('<div id="main" class="list"></div>');
     });
     it("should add id shortcut (div#main)", function() {
-      expect(settee('(div#main)')()).to.equal('<div id="main"></div>');
-      return expect(settee.render('(div#main.list.active)')).to.equal('<div id="main" class="list active"></div>');
+      expect(settee(precompile('(div#main)'))()).to.equal('<div id="main"></div>');
+      return expect(settee.render(precompile('(div#main.list.active)'))).to.equal('<div id="main" class="list active"></div>');
     });
     it("should default to div for (#main)", function() {
-      expect(settee.render('(#main)')).to.equal('<div id="main"></div>');
-      expect(settee.render('(#main.test)')).to.equal('<div id="main" class="test"></div>');
-      return expect(settee.render('(.test#main)')).to.equal('<div id="main" class="test"></div>');
+      expect(settee.render(precompile('(#main)'))).to.equal('<div id="main"></div>');
+      expect(settee.render(precompile('(#main.test)'))).to.equal('<div id="main" class="test"></div>');
+      return expect(settee.render(precompile('(.test#main)'))).to.equal('<div id="main" class="test"></div>');
     });
     it("should allow mixing shortcut types (div#main.container)", function() {
-      expect(settee.render('(div#main.list)')).to.equal('<div id="main" class="list"></div>');
-      expect(settee.render('(div#main.list.active)')).to.equal('<div id="main" class="list active"></div>');
-      expect(settee.render('(div.list#main.active)')).to.equal('<div id="main" class="list active"></div>');
-      return expect(settee.render('(div.list.active#main)')).to.equal('<div id="main" class="list active"></div>');
+      expect(settee.render(precompile('(div#main.list)'))).to.equal('<div id="main" class="list"></div>');
+      expect(settee.render(precompile('(div#main.list.active)'))).to.equal('<div id="main" class="list active"></div>');
+      expect(settee.render(precompile('(div.list#main.active)'))).to.equal('<div id="main" class="list active"></div>');
+      return expect(settee.render(precompile('(div.list.active#main)'))).to.equal('<div id="main" class="list active"></div>');
     });
     it('should support auto_tag generation: <crap></crap> for (crap)', function() {
       var res;
-      res = settee.render('(crap)');
+      res = settee.render(precompile('(crap)'));
       expect(res).to.equal('<crap></crap>');
-      res = settee('(crap.active)');
+      res = settee(precompile('(crap.active)'));
       return expect(res()).to.equal('<crap class="active"></crap>');
     });
     it('should swallow null/undefined when using (. :varname)', function() {
       var res, src;
-      src = '(div "Hello" (. :name))';
+      src = precompile('(div "Hello" (. :name))');
       res = settee.render(src, {
         name: null
       });
       expect(res).to.equal("<div>Hello</div>");
-      src = '(div "Hello " (. :name :city))';
+      src = precompile('(div "Hello " (. :name :city))');
       res = settee.render(src, {
         city: "Dallas"
       });
       return expect(res).to.equal("<div>Hello Dallas</div>");
     });
-    it('should render precompiled templates', function() {
-      var res, tmp;
-      tmp = settee.precompile('(html (body :city');
-      res = settee.render(tmp, {
-        city: "Dallas"
-      });
-      expect(res).to.equal("<html><body>Dallas</body></html>");
-      res = settee(tmp);
-      return expect(res({
-        city: "Dallas"
-      })).to.equal("<html><body>Dallas</body></html>");
-    });
-    it('should allow creating custom tags / helpers', function() {
-      var expected, output, src;
-      settee.define('widget', '(div.widget (div.body :block1');
-      src = '(widget\n  (div "Hello!"))';
+    it('should allow creating custom tags / helpers from other precompiled templates', function() {
+      var expected, output, src, tmp;
+      tmp = precompile('(div.widget (div.body :block1');
+      settee.define('widget', tmp);
+      src = precompile('(widget\n  (div "Hello!"))');
       output = settee.render(src);
       expected = '<div class="widget"><div class="body"><div>Hello!</div></div></div>';
       expect(output).to.equal(expected);
       settee.undefine('widget');
-      return expect(settee('(widget)')()).to.equal("<widget></widget>");
-    });
-    it('should allow creating custom tags / helpers from precompiled templates', function() {
-      var expected, output, src;
-      settee.define('widget', '(div.widget (div.body :block1');
-      src = '(widget\n  (div "Hello!"))';
-      output = settee.render(src);
-      expected = '<div class="widget"><div class="body"><div>Hello!</div></div></div>';
-      expect(output).to.equal(expected);
-      settee.undefine('widget');
-      return expect(settee('(widget)')()).to.equal("<widget></widget>");
+      return expect(settee(precompile('(widget)'))()).to.equal("<widget></widget>");
     });
     return it('should allow adding attrs to custom tags', function() {
       var expected, output, src;
@@ -223,7 +206,7 @@ describe("settee() v" + settee.version, function() {
           }, elements)
         ]);
       });
-      src = '(.\n(widget id=mine\n  (div "Hello!"))\n(widget id=yours \n  (div "Hello!")\n  (div "GOODBYE!"))';
+      src = precompile('(.\n(widget id=mine\n  (div "Hello!"))\n(widget id=yours \n  (div "Hello!")\n  (div "GOODBYE!"))');
       output = settee.render(src);
       expected = '<div id="mine" class="widget"><div class="body"><div>Hello!</div></div></div><div id="yours" class="widget"><div class="body"><div>Hello!</div><div>GOODBYE!</div></div></div>';
       return expect(output).to.equal(expected);
@@ -245,7 +228,7 @@ describe("settee() v" + settee.version, function() {
     });
     return describe('disconnected settee function', function() {
       return it('should still be usable', function() {
-        return expect(_set.render("(div (span 'hello'")).to.equal('<div><span>hello</span></div>');
+        return expect(_set.render(precompile("(div (span 'hello'"))).to.equal('<div><span>hello</span></div>');
       });
     });
   });

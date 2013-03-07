@@ -1,12 +1,11 @@
 (function() {
-  var VERSION, attrRE, code_to_source, compile, context, custom_tags, escapeRegExp, global, idRE, nativeForEach, nativeIsArray, nativeMap, nativeTrim, old_settee, parse_source, quotedAttrRE, settee, slice, tag_builder, translate, _checkVar, _do_parse, _each, _isArray, _isString, _map, _parseAttrs, _parser, _scanner, _trim,
+  var VERSION, attrRE, code_to_source, compile, context, escapeRegExp, global, idRE, nativeForEach, nativeIsArray, nativeMap, nativeTrim, old_settee, parse_source, quotedAttrRE, settee, slice, tag, translate, _checkVar, _do_parse, _each, _isArray, _isString, _map, _parseAttrs, _parser, _ref, _scanner, _trim,
     __hasProp = {}.hasOwnProperty;
 
-  VERSION = '0.5.0';
-
-  global = this;
-
-  old_settee = global.settee;
+  if (typeof module === "undefined" || module === null) {
+    global = this;
+    old_settee = global.settee;
+  }
 
   slice = Array.prototype.slice;
 
@@ -27,9 +26,6 @@
   escapeRegExp = function(str) {
     return str.replace(/([-.*+?^${}()|[\]\/\\])/g, '\\$1');
   };
-
-  _map;
-
 
   _map = function(obj, iterator, context) {
     var results;
@@ -195,6 +191,12 @@
     return code.pop();
   };
 
+  if (typeof exports !== "undefined" && exports !== null) {
+    exports.parse_source = parse_source;
+  } else {
+    this.parse_source = parse_source;
+  }
+
   translate = function(code, opts) {
     var cname, i, id, new_code, parts, tag, token, _i, _j, _len, _len1;
     new_code = [];
@@ -247,6 +249,12 @@
     return new_code;
   };
 
+  if (typeof exports !== "undefined" && exports !== null) {
+    exports.translate = translate;
+  } else {
+    this.translate = translate;
+  }
+
   code_to_source = function(code, fn_name) {
     var att, attr_str, attrs, key, params, tag, token, value, _i, _len;
     params = [];
@@ -283,139 +291,248 @@
       attr_str += String(value).indexOf('this.') !== 0 ? JSON.stringify(value) : value;
       attr_str += ",";
     }
-    return "" + fn_name + "('" + tag + "', { " + (attr_str.substr(0, attr_str.length - 1)) + " }, [" + (params.join(', ')) + "])";
+    if (tag === 'loop' || tag === 'each') {
+      return "" + fn_name + "('" + tag + "', { " + (attr_str.substr(0, attr_str.length - 1)) + " }, " + (params.shift()) + ", function(){return [" + (params.join(', ')) + "]; })";
+    } else {
+      return "" + fn_name + "('" + tag + "', { " + (attr_str.substr(0, attr_str.length - 1)) + " }, [" + (params.join(', ')) + "])";
+    }
   };
+
+  if (typeof exports !== "undefined" && exports !== null) {
+    exports.code_to_source = code_to_source;
+  } else {
+    this.code_to_source = code_to_source;
+  }
 
   compile = function(code, opts) {
     var fn_name, source;
-    fn_name = 'b';
+    fn_name = 's';
     source = code_to_source(code, fn_name);
     return new Function(fn_name, "return " + source + ";");
   };
 
-  custom_tags = {
-    ".": function(tag, attrs, children) {
+  if (typeof exports !== "undefined" && exports !== null) {
+    exports.compile = compile;
+  } else {
+    this.compile = compile;
+  }
+
+  context = (function() {
+
+    function context(ctx) {
+      this.ctx = ctx;
+    }
+
+    context.prototype.get = function(path) {
+      var data, name, nextname, parts;
+      parts = path.split('.');
+      name = parts.shift();
+      data = this.ctx[name];
+      while (parts.length && (data != null)) {
+        nextname = parts.shift();
+        data = data[nextname];
+        if (data != null) {
+          name = nextname;
+        }
+      }
+      return data || '';
+    };
+
+    context.prototype.has = function(path) {
+      return this.get(path) && this.get(path) !== '';
+    };
+
+    return context;
+
+  })();
+
+  if (typeof module !== "undefined" && module !== null) {
+    module.exports = context;
+  } else {
+    this.context = context;
+  }
+
+  tag = (function() {
+    var instance;
+
+    function tag() {}
+
+    tag.prototype["."] = function(tag, attrs, children) {
       return children.join('');
-    },
-    "if": function(tag, attrs, children) {
-      var first;
+    };
+
+    tag.prototype["+"] = tag.prototype['.'];
+
+    tag.prototype["if"] = function(tag, attrs, children) {
+      var first, _ref, _ref1;
       first = children.shift();
       if (first) {
-        return children.join('');
+        return (_ref = children[0]) != null ? _ref : '';
       } else {
-        return '';
+        return (_ref1 = children[1]) != null ? _ref1 : '';
       }
-    },
-    "unless": function(tag, attrs, children) {
-      var first;
+    };
+
+    tag.prototype.ifelse = tag.prototype["if"];
+
+    tag.prototype.unless = function(tag, attrs, children) {
+      var first, _ref, _ref1;
       first = children.shift();
       if (!first) {
-        return children.join('');
+        return (_ref = children[0]) != null ? _ref : '';
       } else {
-        return '';
+        return (_ref1 = children[1]) != null ? _ref1 : '';
       }
-    },
-    "ifelse": function(tag, attrs, children) {
-      if (children[0]) {
-        return children[1];
-      } else {
-        return children[2];
-      }
-    },
-    "eq": function(tag, attrs, children) {
+    };
+
+    tag.prototype.eq = function(tag, attrs, children) {
       return children[0] === children[1];
-    },
-    "neq": function(tag, attrs, children) {
-      return children[0] !== children[1];
-    }
-  };
+    };
 
-  custom_tags['is'] = custom_tags['eq'];
+    tag.prototype['is'] = tag.prototype.eq;
 
-  custom_tags['='] = custom_tags['eq'];
+    tag.prototype['='] = tag.prototype.eq;
 
-  custom_tags['isnt'] = custom_tags['neq'];
+    tag.prototype.not = function(tag, attrs, children) {
+      return !children[0];
+    };
 
-  custom_tags['!='] = custom_tags['neq'];
+    tag.prototype['!'] = tag.prototype.eq;
 
-  custom_tags['+'] = custom_tags['.'];
-
-  tag_builder = function(tag, attrs, children) {
-    var attr_s, name, value;
-    if (attrs == null) {
-      attrs = {};
-    }
-    if (children == null) {
+    tag.prototype.loop = function(tag, attrs, items, block) {
+      var children, ctx, i, item, _i, _len;
       children = [];
-    }
-    if (custom_tags[tag]) {
-      return custom_tags[tag](tag, attrs, children);
-    } else {
-      attr_s = '';
-      for (name in attrs) {
-        if (!__hasProp.call(attrs, name)) continue;
-        value = attrs[name];
-        attr_s += " " + name + "=\"" + value + "\"";
+      ctx = new context({
+        items: items
+      });
+      for (i = _i = 0, _len = items.length; _i < _len; i = ++_i) {
+        item = items[i];
+        ctx.ctx.item = item;
+        ctx.ctx.index = i;
+        children.push(block.call(ctx));
       }
-      return "<" + (tag + attr_s) + ">" + (children.join('')) + "</" + tag + ">";
-    }
-  };
+      return children.join('');
+    };
 
-  context = function(ctx) {
-    this.ctx = ctx;
-  };
+    tag.prototype.each = tag.prototype.loop;
 
-  context.prototype.get = function(path) {
-    var data, name, nextname, parts;
-    parts = path.split('.');
-    name = parts.shift();
-    data = this.ctx[name];
-    while (parts.length && (data != null)) {
-      nextname = parts.shift();
-      data = data[nextname];
-      if (data) {
-        name = nextname;
+    tag.prototype.neq = function(tag, attrs, children) {
+      return children[0] !== children[1];
+    };
+
+    tag.prototype['isnt'] = tag.prototype.neq;
+
+    tag.prototype['!='] = tag.prototype.neq;
+
+    instance = new tag;
+
+    tag.define = function(name, value) {
+      return instance[name] = value;
+    };
+
+    tag.undefine = function(name) {
+      return delete instance[name];
+    };
+
+    tag.builder = function(tag, attrs, children) {
+      var attr_s, name, value;
+      if (attrs == null) {
+        attrs = {};
       }
-    }
-    return data || '';
-  };
+      if (children == null) {
+        children = [];
+      }
+      if (instance[tag]) {
+        return instance[tag].apply(instance[tag], arguments);
+      } else {
+        attr_s = '';
+        for (name in attrs) {
+          if (!__hasProp.call(attrs, name)) continue;
+          value = attrs[name];
+          attr_s += " " + name + "=\"" + value + "\"";
+        }
+        return "<" + (tag + attr_s) + ">" + (children.join('')) + "</" + tag + ">";
+      }
+    };
 
-  context.prototype.has = function(path) {
-    return this.get(path) && this.get(path) !== '';
-  };
+    return tag;
+
+  })();
+
+  if (typeof module !== "undefined" && module !== null) {
+    module.exports = tag;
+  } else {
+    this.tag = tag;
+  }
+
+  VERSION = '0.7.0';
+
+  if (typeof module !== "undefined" && module !== null) {
+    _ref = require('./parser'), parse_source = _ref.parse_source, translate = _ref.translate, compile = _ref.compile, _isString = _ref._isString, _isArray = _ref._isArray;
+    context = require('./context');
+    tag = require('./tag');
+  }
 
   settee = function(source) {
-    var code, fn;
-    code = parse_source(source);
-    code = translate(code);
-    fn = compile(code);
-    return function(src_ctx) {
-      var ctx;
-      if (src_ctx == null) {
-        src_ctx = {};
-      }
-      ctx = new context(src_ctx);
-      return fn.call(ctx, tag_builder);
-    };
+    var code;
+    code = typeof source === 'string' ? translate(parse_source(source)) : source;
+    return settee.compile(code);
   };
 
-  settee.to_html = function(source, ctx, opts) {
+  settee.render = function(source, ctx) {
     if (ctx == null) {
       ctx = {};
     }
     return settee(source)(ctx);
   };
 
-  settee.define = function(tag, handler) {
+  settee.to_html = settee.render;
+
+  settee.compile = function(code, wrap) {
+    var fn;
+    if (wrap == null) {
+      wrap = true;
+    }
+    fn = typeof code === 'function' ? code : compile(code);
+    if (!wrap) {
+      return fn;
+    }
+    return function(src_ctx) {
+      var ctx;
+      if (src_ctx == null) {
+        src_ctx = {};
+      }
+      ctx = new context(src_ctx);
+      return fn.call(ctx, tag.builder);
+    };
+  };
+
+  settee.parse = function(source) {
+    var code;
+    code = parse_source(source);
+    return translate(code);
+  };
+
+  settee.precompile = function(source) {
+    var code, tmpl_fn;
+    code = settee.parse(source);
+    tmpl_fn = settee.compile(code, false);
+    return tmpl_fn;
+  };
+
+  settee.define = function(tagName, handler) {
     var sub_template;
-    if (_isString(handler)) {
+    if (_isString(handler || handler.length === 1)) {
       sub_template = settee(handler);
       handler = (function(sub_template) {
-        return function(tag, attrs, children) {
-          var ctx, elem, i, _i, _len;
+        return function(tagName, attrs, children) {
+          var childcontent, ctx, elem, i, _i, _len;
+          childcontent = children.join('');
           ctx = {
-            blocks: children.join(''),
-            "yield": children.join('')
+            tagName: tagName,
+            attrs: attrs,
+            blocks: childcontent,
+            "yield": childcontent
           };
           for (i = _i = 0, _len = children.length; _i < _len; i = ++_i) {
             elem = children[i];
@@ -425,19 +542,17 @@
         };
       })(sub_template);
     }
-    custom_tags[tag] = handler;
+    tag.define(tagName, handler);
     return settee;
   };
 
-  settee.undefine = function(tag) {
-    if (custom_tags[tag]) {
-      delete custom_tags[tag];
-    }
+  settee.undefine = function(tagName) {
+    tag.undefine(tagName);
     return settee;
   };
 
   settee.noConflict = function() {
-    if (old_settee) {
+    if (old_settee != null) {
       global.settee = old_settee;
     } else {
       delete global.settee;
@@ -445,14 +560,15 @@
     return settee;
   };
 
-  settee.tag_builder = tag_builder;
+  settee.tag_builder = tag.builder;
 
   settee.version = VERSION;
 
-  if ((typeof module !== "undefined" && module !== null ? module.exports : void 0) != null) {
-    module.exports.settee = settee;
+  if (typeof module !== "undefined" && module !== null) {
+    module.exports = settee;
+    module.exports.__express = require('./express');
   } else {
-    global.settee = settee;
+    this.settee = settee;
   }
 
 }).call(this);

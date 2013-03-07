@@ -1,0 +1,28 @@
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Settee.min - Mocha Tests</title>
+    <link rel="stylesheet" href="../ext/mocha.css" />
+    <script src="../ext/chai.js"></script>
+    <script src="../ext/mocha.js"></script>
+    <script>mocha.setup('bdd')</script>
+    <script src="../settee.js"></script>
+    <script>window.fullSettee= settee.noConflict();</script>
+    <script src="../settee.runtime.js"></script>
+    <script src="test.runtime.js"></script>    
+  </head>
+  <body>
+    <div id="mocha"></div>
+  </body>
+</html>
+<script>
+  
+  window.onload= function() {
+    chai.Assertion.includeStack = true;
+    window.expect= chai.expect;
+
+    var runner=mocha.run();
+    runner.ignoreLeaks= true;
+    runner.globals(['Settee', 'chai', 'expect', 'mocha', 'describe', 'it']);
+  }
+</script>
