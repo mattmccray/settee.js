@@ -1,0 +1,14 @@
+{
+  "name": "settee",
+  "version": "0.7.0",
+  "main": "./settee.min.js",
+  "dependencies": {},
+  "ignore": [
+    "test/",
+    "lib/",
+    "bench/",
+    "src/",
+    "ext/",
+    "Makefile"
+  ]
+}
